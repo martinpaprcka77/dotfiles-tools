@@ -32,6 +32,9 @@ Export-ModuleMember -Function @(
     'Show-DockerMenu',
     'Show-GitMenu',
     'Show-TerminalMenu',
+    'Show-DotfilesMenu',
+    'Show-PwshMenu',
+    'Show-VSCodeMenu',
 
     # Checkers
     'Get-DiskStatus',

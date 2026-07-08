@@ -2,18 +2,22 @@
 .SYNOPSIS
     Hlavní interaktivní menu.
 .DESCRIPTION
-    Modern menu with arrow-key navigation. Items: Docker, System, Git, Tools, Exit.
+    Modern arrow-key menu with organized categories:
+    Dotfiles, Docker, Git, Terminal, PowerShell, VS Code, System.
 .NOTES
     Cesta: ~/Projects/tools/menu/menu-main.ps1
 #>
 
 function Start-MainMenu {
     $items = [ordered]@{
-        '1. 🐳 Docker'     = { Show-DockerMenu }
-        '2. 🔍 Diagnostika' = { Invoke-SystemCheck }
-        '3. 📋 Git'         = { Show-GitMenu }
-        '4. 🖥️  Terminal'     = { Show-TerminalMenu }
-        '5. 🚪 Exit'        = { return }
+        '1. ⚡ Dotfiles'      = { Show-DotfilesMenu }
+        '2. 🔍 Diagnostika'   = { Invoke-SystemCheck }
+        '3. 🐳 Docker'        = { Show-DockerMenu }
+        '4. 📋 Git'           = { Show-GitMenu }
+        '5. 🖥️  Terminal'      = { Show-TerminalMenu }
+        '6. 💻 PowerShell'    = { Show-PwshMenu }
+        '7. 📝 VS Code'       = { Show-VSCodeMenu }
+        '8. 🚪 Exit'          = { return }
     }
 
     Show-Menu -Title 'HLAVNÍ MENU' -Items $items
