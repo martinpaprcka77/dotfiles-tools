@@ -75,12 +75,17 @@ function Show-DotfilesMenu {
             if (Test-Path $s) { Write-Info "Running deps.ps1..."; & $s } else { Write-Err "deps.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Winget auto-installer: Git, PS7, WT, VS Code, Starship, zoxide' }
-        '9. 🪟 Windows Defaults' = @{ Action = {
+        '9. 🧹 Modernize PS'     = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\modernize.ps1'
+            if (Test-Path $s) { Write-Info "Running modernize.ps1..."; & $s } else { Write-Err "modernize.ps1 not found" }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'PSResourceGet, cleanup legacy, security baseline, PS 7.6+ ready' }
+        '10. 🪟 Windows Defaults' = @{ Action = {
             $s = Join-Path $env:DOTFILES_TOOLS 'scripts\windows.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "windows.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Explorer, taskbar, privacy, bloatware removal' }
-        '9. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
+        '↩️  Back'                = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'DOTFILES' -Items $items
 }
