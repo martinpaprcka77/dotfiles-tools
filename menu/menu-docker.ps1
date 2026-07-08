@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    Docker submenu.
+    Docker submenu with arrow-key navigation.
 .DESCRIPTION
-    Nabídka pro správu Docker kontejnerů a images.
+    Interactive Docker container and image management.
 .NOTES
     Cesta: ~/Projects/tools/menu/menu-docker.ps1
 #>
@@ -15,15 +15,15 @@ function Show-DockerMenu {
     }
 
     $items = [ordered]@{
-        '1' = { docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; Read-Host "`nStiskni Enter..." }
-        '2' = { docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'; Read-Host "`nStiskni Enter..." }
-        '3' = { docker stats --no-stream; Read-Host "`nStiskni Enter..." }
-        '4' = { docker system df; Read-Host "`nStiskni Enter..." }
-        '5' = { $name = Read-Host 'Název kontejneru'; docker logs --tail 50 $name 2>&1; Read-Host "`nStiskni Enter..." }
-        '6' = { return }
+        '1. 📦 Containers (ps -a)' = { docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; Read-Host "`nStiskni Enter..." }
+        '2. 🖼️  Images'             = { docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'; Read-Host "`nStiskni Enter..." }
+        '3. 📊 Stats'              = { docker stats --no-stream; Read-Host "`nStiskni Enter..." }
+        '4. 💾 Disk usage'         = { docker system df; Read-Host "`nStiskni Enter..." }
+        '5. 📜 Logs'               = { $name = Read-Host 'Název kontejneru'; docker logs --tail 50 $name 2>&1; Read-Host "`nStiskni Enter..." }
+        '6. ↩️  Back'               = { return }
     }
 
-    Show-Menu -Title 'DOCKER MENU' -Items $items
+    Show-Menu -Title 'DOCKER' -Items $items
 }
 
 # If run directly
