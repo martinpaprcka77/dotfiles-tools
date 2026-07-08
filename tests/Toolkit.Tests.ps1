@@ -36,7 +36,7 @@ Describe 'Toolkit Module' {
         }
     }
 
-    # ── All 18 exported functions ─────────────────────────────
+    # ── All 30 exported functions ─────────────────────────────
     Context 'Public functions' {
         $expectedFunctions = @(
             'Test-Admin', 'Get-ScriptDirectory',
@@ -45,7 +45,10 @@ Describe 'Toolkit Module' {
             'Show-TerminalMenu', 'Show-DotfilesMenu', 'Show-PwshMenu', 'Show-VSCodeMenu',
             'Get-DiskStatus', 'Get-ServiceStatus', 'Get-NetworkInfo', 'Get-TopProcesses',
             'Invoke-SystemCheck',
-            'Get-ToolkitConfig', 'Save-ToolkitConfig', 'Merge-Hashtable'
+            'Get-ToolkitConfig', 'Save-ToolkitConfig', 'Merge-Hashtable',
+            'Get-PSModulePath', 'Add-PSModulePath', 'Remove-PSModulePath',
+            'Reset-PSModulePath', 'Export-PSModulePath', 'Import-PSModulePath',
+            'Test-PSModulePath'
         )
 
         It "Function '<_>' is exported" -ForEach $expectedFunctions {
@@ -175,6 +178,85 @@ Describe 'Toolkit Module' {
 
         It 'Get-TopProcesses does not throw' {
             { Get-TopProcesses -ErrorAction SilentlyContinue } | Should -Not -Throw
+        }
+    }
+
+    # ── PSModulePath functions ────────────────────────────────
+    Context 'PSModulePath functions' {
+        BeforeEach {
+            $script:origPSModulePath = $env:PSModulePath
+        }
+
+        AfterEach {
+            $env:PSModulePath = $script:origPSModulePath
+        }
+
+        It 'Get-PSModulePath returns the split entries' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            $result = Get-PSModulePath
+            $result | Should -Be @('C:\Mods\A', 'C:\Mods\B')
+        }
+
+        It 'Add-PSModulePath adds a new path' {
+            $env:PSModulePath = 'C:\Mods\A'
+            Add-PSModulePath -Path 'C:\Mods\New'
+            ($env:PSModulePath -split [IO.Path]::PathSeparator) | Should -Contain 'C:\Mods\New'
+        }
+
+        It 'Add-PSModulePath is a no-op when the path already exists' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            Add-PSModulePath -Path 'C:\Mods\A'
+            ($env:PSModulePath -split [IO.Path]::PathSeparator | Where-Object { $_ -eq 'C:\Mods\A' }).Count | Should -Be 1
+        }
+
+        It 'Remove-PSModulePath removes by index' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            Remove-PSModulePath -Index 0
+            ($env:PSModulePath -split [IO.Path]::PathSeparator) | Should -Be @('C:\Mods\B')
+        }
+
+        It 'Remove-PSModulePath removes by path' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            Remove-PSModulePath -Path 'C:\Mods\A'
+            ($env:PSModulePath -split [IO.Path]::PathSeparator) | Should -Be @('C:\Mods\B')
+        }
+
+        It 'Reset-PSModulePath sets the modern baseline entries in order' {
+            Mock Test-Path { $true } -ModuleName Toolkit
+            Mock New-Item { } -ModuleName Toolkit
+            Reset-PSModulePath
+            $entries = $env:PSModulePath -split [IO.Path]::PathSeparator
+            $entries[0] | Should -Be "$env:ProgramFiles\PowerShell\7\Modules"
+            $entries[1] | Should -Be "$env:USERPROFILE\Documents\PowerShell\Modules"
+        }
+
+        It 'Export-PSModulePath writes JSON with the correct entry count' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            $outPath = Join-Path $TestDrive 'psmodulepath.json'
+            Export-PSModulePath -OutputPath $outPath
+            $exported = Get-Content $outPath -Raw | ConvertFrom-Json
+            $exported.EntryCount | Should -Be 2
+            $exported.Entries | Should -Be @('C:\Mods\A', 'C:\Mods\B')
+        }
+
+        It 'Import-PSModulePath restores entries from an exported file' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            $outPath = Join-Path $TestDrive 'psmodulepath-import.json'
+            Export-PSModulePath -OutputPath $outPath
+            $env:PSModulePath = 'C:\Mods\Other'
+            Import-PSModulePath -InputPath $outPath
+            ($env:PSModulePath -split [IO.Path]::PathSeparator) | Should -Be @('C:\Mods\A', 'C:\Mods\B')
+        }
+
+        It 'Import-PSModulePath errors cleanly when the file is missing' {
+            Mock Write-Err { } -ModuleName Toolkit
+            { Import-PSModulePath -InputPath (Join-Path $TestDrive 'does-not-exist.json') } | Should -Not -Throw
+            Should -Invoke Write-Err -ModuleName Toolkit -Times 1
+        }
+
+        It 'Test-PSModulePath runs without throwing' {
+            $env:PSModulePath = @('C:\Mods\A', 'C:\Mods\B') -join [IO.Path]::PathSeparator
+            { Test-PSModulePath } | Should -Not -Throw
         }
     }
 

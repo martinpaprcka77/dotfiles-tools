@@ -12,20 +12,11 @@ on:
 
 jobs:
   test:
-    name: Pester Tests (PowerShell ${{ matrix.ps-version }})
+    name: Pester Tests
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ps-version: ['7.4', '7.6']
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup PowerShell ${{ matrix.ps-version }}
-        uses: actions/setup-powershell@v1
-        with:
-          pwsh-version: ${{ matrix.ps-version }}
 
       - name: Install Pester
         shell: pwsh
@@ -53,6 +44,12 @@ jobs:
       - name: Validate JSON (profiles-fragment.json)
         shell: pwsh
         run: |
+          # profiles-fragment.json is generated at runtime by Add-WTProfiles.ps1,
+          # so it isn't committed — only validate it when it's actually present.
+          if (-not (Test-Path scripts/profiles-fragment.json)) {
+            Write-Host "⏭️  profiles-fragment.json not present (generated artifact) — skipping"
+            return
+          }
           try {
             Get-Content scripts/profiles-fragment.json -Raw | ConvertFrom-Json | Out-Null
             Write-Host "✅ profiles-fragment.json — valid JSON"

@@ -9,7 +9,7 @@ Plánované funkce a směr vývoje. Priority: 🔴 vysoká · 🟡 střední · 
 - ✅ Modulární PowerShell profil (`dotfiles-powershell`)
 - ✅ Idempotentní instalátor (`install.ps1` — WhatIf, Force, backup, summary)
 - ✅ Update mechanism (`update.ps1` — git fetch + reload)
-- ✅ Toolkit modul — **22 exportovaných funkcí**
+- ✅ Toolkit modul — **30 exportovaných funkcí**
 - ✅ Interaktivní menu — 7 submenus (Dotfiles, Docker, Git, Terminal, PowerShell, VS Code, Diagnostika)
 - ✅ Moderní menu engine — šipky ↑↓, zvýraznění, popisky, inline režim
 - ✅ Arrow-key menu s popisky u každé položky
@@ -21,7 +21,7 @@ Plánované funkce a směr vývoje. Priority: 🔴 vysoká · 🟡 střední · 
 - ✅ Starship prompt (Rust) s `starship.toml` konfigurací (30+ modulů)
 - ✅ oh-my-posh jako fallback
 - ✅ Generování ikon (`Generate-Icons.ps1`)
-- ✅ 25+ Pester testů (6 kontextů, Mock pokrytí)
+- ✅ 34 Pester testů (7 kontextů, Mock pokrytí)
 - ✅ Bezpečné ukládání klíčů (`Get-SecretKey` — SecretManagement + env fallback)
 - ✅ `extra.ps1` pattern — uživatelské přizpůsobení mimo Git
 - ✅ AGENTS.md + CLAUDE.md v obou repozitářích

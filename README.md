@@ -1,11 +1,11 @@
 # dotfiles-tools
 
-> **PowerShell toolbox** — interactive menus, system diagnostics, Docker & Git helpers, Toolkit module with 22 functions.
+> **PowerShell toolbox** — interactive menus, system diagnostics, Docker & Git helpers, Toolkit module with 30 functions.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--tools-blue)](#)
-[![files](https://img.shields.io/badge/files-24-green)](#)
+[![files](https://img.shields.io/badge/files-44-green)](#)
 [![module](https://img.shields.io/badge/module-Toolkit-orange)](#)
-[![tests](https://img.shields.io/badge/tests-25+_cases-brightgreen)](#)
+[![tests](https://img.shields.io/badge/tests-34_cases-brightgreen)](#)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
 ---
@@ -18,7 +18,7 @@
 | Profile orchestration | Menu & diagnostics |
 | Bootstrap & install | Toolkit PowerShell module |
 | Version/host profiles | Windows Terminal integration |
-| Secret management helpers | Pester tests (25+ cases) |
+| Secret management helpers | Pester tests (34 cases) |
 | 👉 **[github.com/martinpaprcka77/dotfiles-powershell](https://github.com/martinpaprcka77/dotfiles-powershell)** | 👉 **[github.com/martinpaprcka77/dotfiles-tools](https://github.com/martinpaprcka77/dotfiles-tools)** |
 | **🌐 Portal: [martinpaprcka77.github.io](https://martinpaprcka77.github.io)** | |
 
@@ -29,11 +29,11 @@
 | What | Details |
 |------|---------|
 | **Location** | `~/Projects/tools/` |
-| **22 functions** | Toolkit module — menu engine, diagnostics, utilities, logging, config |
+| **30 functions** | Toolkit module — menu engine, diagnostics, utilities, logging, config, modulepath |
 | **5 bin scripts** | `menu.ps1`, `check.ps1`, `configure.ps1`, `setup-repos.ps1` + scripts |
-| **3 interactive menus** | Main, Docker, Git (numbered, extensible) |
+| **7 menus** | Main, Docker, Git, Terminal, Dotfiles, Pwsh, VSCode (numbered, extensible) |
 | **4 helper scripts** | Add-WTProfiles, Generate-Icons, configure, setup-repos |
-| **25+ Pester tests** | Module structure, function exports, Mock coverage, config, error paths |
+| **34 Pester tests** | Module structure, function exports, Mock coverage, config, error paths |
 
 ---
 
@@ -47,7 +47,7 @@ graph TB
     end
 
     subgraph "Toolkit Module"
-        PSD1["📦 Toolkit.psd1<br/>(manifest, 22 exports)"]
+        PSD1["📦 Toolkit.psd1<br/>(manifest, 30 exports)"]
         PSM1["📦 Toolkit.psm1<br/>(dot-sources lib/)"]
     end
 
@@ -123,7 +123,7 @@ Invoke-SystemCheck
 
 ---
 
-## 📦 Toolkit Module — 22 Functions
+## 📦 Toolkit Module — 30 Functions
 
 | Category | Function | Purpose |
 |----------|----------|---------|
@@ -148,6 +148,13 @@ Invoke-SystemCheck
 | **Config** | `Get-ToolkitConfig` | Merge defaults + JSON + env |
 | | `Save-ToolkitConfig` | Save config to disk |
 | | `Merge-Hashtable` | Deep merge two hashtables |
+| **PSModulePath** | `Get-PSModulePath` | List entries with validation status |
+| | `Add-PSModulePath` | Add a path (no duplicates) |
+| | `Remove-PSModulePath` | Remove a path by index or value |
+| | `Reset-PSModulePath` | Reset to modern baseline |
+| | `Export-PSModulePath` | Save current paths to JSON |
+| | `Import-PSModulePath` | Restore paths from JSON |
+| | `Test-PSModulePath` | Validate (duplicates, missing dirs, OneDrive, priority) |
 
 ---
 
@@ -164,7 +171,7 @@ Invoke-SystemCheck
 │   ├── checkers.ps1          ← disk, services, network, processes
 │   └── config.ps1            ← 3-layer config (defaults → JSON → env)
 ├── Toolkit/
-│   ├── Toolkit.psd1          ← module manifest (22 exports)
+│   ├── Toolkit.psd1          ← module manifest (30 exports)
 │   └── Toolkit.psm1          ← module body
 ├── menu/
 │   ├── menu-main.ps1         ← Start-MainMenu
@@ -183,7 +190,7 @@ Invoke-SystemCheck
 │   ├── windows.ps1           ← Windows defaults (Explorer, privacy)
 │   └── precheck.ps1          ← 30+ inventory checks
 ├── configs/settings.json     ← default config
-├── tests/Toolkit.Tests.ps1   ← 25+ Pester test cases
+├── tests/Toolkit.Tests.ps1   ← 34 Pester test cases
 ├── docs/                     ← ARCHITECTURE, MANUAL, ROADMAP, PROMPT
 └── .gitignore
 ```
@@ -194,8 +201,8 @@ Invoke-SystemCheck
 
 | Document | Description |
 |----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 6 Mermaid diagrams — components, WT sequence, menu engine, hierarchy, dependency chain |
-| [MANUAL.md](docs/MANUAL.md) | 11-section user guide — every script with examples |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 4 Mermaid diagrams — components, WT sequence, menu engine, hierarchy, dependency chain |
+| [MANUAL.md](docs/MANUAL.md) | 15-section user guide — every script with examples |
 | [ROADMAP.md](docs/ROADMAP.md) | 5 phases — completed, planned, known issues |
 | [PROMPT.md](docs/PROMPT.md) | Original AI prompt |
 
@@ -208,7 +215,7 @@ Install-Module Pester -Force
 Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
 ```
 
-**25+ test cases** across 6 contexts: module structure, 22 function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks.
+**34 test cases** across 7 contexts: module structure, 30 function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks, PSModulePath management.
 
 ---
 
