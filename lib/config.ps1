@@ -42,7 +42,8 @@ function Get-ToolkitConfig {
     }
 
     # ── File overrides ────────────────────────────────────────
-    $configFile = Join-Path $env:DOTFILES_TOOLS 'configs\settings.json'
+    $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
+    $configFile = Join-Path $toolsRoot 'configs\settings.json'
     if (Test-Path $configFile) {
         try {
             $fileConfig = Get-Content $configFile -Raw | ConvertFrom-Json -AsHashtable
@@ -93,7 +94,8 @@ function Merge-Hashtable {
 #>
 function Save-ToolkitConfig {
     param([hashtable]$Config)
-    $configFile = Join-Path $env:DOTFILES_TOOLS 'configs\settings.json'
+    $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
+    $configFile = Join-Path $toolsRoot 'configs\settings.json'
     $json = $Config | ConvertTo-Json -Depth 5
     Set-Content -Path $configFile -Value $json -Encoding UTF8
     $script:Config = $Config
