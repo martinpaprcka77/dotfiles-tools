@@ -1,23 +1,26 @@
 <#
 .SYNOPSIS
-    Modern interactive menu engine with arrow-key navigation.
+    Modern interactive menu engine with arrow-key navigation and descriptions.
 .DESCRIPTION
     Renders a highlighted menu using box-drawing characters. Supports:
     - ↑↓ arrow keys to move selection
-    - Enter to confirm
+    - Enter to confirm (inline mode: runs action, keeps menu visible)
     - Number keys for direct selection
     - Escape / q to exit
+    - Descriptions: each item can have a dimmed hint shown when highlighted
     - Configurable color scheme via Get-ToolkitConfig
 .PARAMETER Title
     Menu title displayed at the top.
 .PARAMETER Items
-    Ordered hashtable: key = "N. Label", value = { scriptblock }.
-    Keys are sorted alphabetically; numeric prefixes control order.
+    Ordered hashtable. Two formats supported:
+    - Simple:  key = { scriptblock }
+    - With desc: key = @{ Action = { scriptblock }; Desc = "What it does" }
+.PARAMETER Inline
+    If true, selecting an item runs its action WITHOUT clearing the screen,
+    then returns to the menu (rolled/expanded feel). Default: false (full screen).
 .EXAMPLE
-    Show-Menu -Title "MAIN MENU" -Items ([ordered]@{
-        "1. Docker"    = { Show-DockerMenu }
-        "2. System"    = { Invoke-SystemCheck }
-        "5. Exit"      = { return }
+    Show-Menu -Title "MAIN MENU" -Inline -Items ([ordered]@{
+        "1. Docker" = @{ Action = { Show-DockerMenu }; Desc = "Container management" }
     })
 .NOTES
     Cesta: ~/Projects/tools/lib/menu.ps1
@@ -30,11 +33,25 @@ function Show-Menu {
         [string]$Title,
 
         [Parameter(Mandatory)]
-        [hashtable]$Items
+        [hashtable]$Items,
+
+        [switch]$Inline
     )
 
-    # ── Get ordered keys ───────────────────────────────────────
-    $keys = @($Items.Keys | Sort-Object)
+    # ── Normalize items to uniform structure ───────────────────
+    $normalized = [ordered]@{}
+    foreach ($k in $Items.Keys) {
+        $v = $Items[$k]
+        if ($v -is [scriptblock]) {
+            $normalized[$k] = @{ Action = $v; Desc = '' }
+        } elseif ($v -is [hashtable]) {
+            $normalized[$k] = @{
+                Action = if ($v.Action -is [scriptblock]) { $v.Action } else { {} }
+                Desc   = if ($v.Desc) { $v.Desc } else { '' }
+            }
+        }
+    }
+    $keys = @($normalized.Keys | Sort-Object)
     if ($keys.Count -eq 0) { Write-Warn "Menu has no items."; return }
 
     # ── Load color config ──────────────────────────────────────
@@ -50,54 +67,72 @@ function Show-Menu {
         }
     } catch { }
 
-    # ── Hide cursor, prepare ───────────────────────────────────
+    # ── Dimensions ─────────────────────────────────────────────
+    $maxLabelWidth = ($keys | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
+    # Check descriptions too
+    $maxDescWidth = ($normalized.Values | ForEach-Object { $_.Desc.Length } | Measure-Object -Maximum).Maximum
+    $boxWidth = [Math]::Max($Title.Length, $maxLabelWidth + $maxDescWidth) + 4
+
+    # ── Hide cursor ────────────────────────────────────────────
     $prevCursor = [Console]::CursorVisible
     [Console]::CursorVisible = $false
     $selected = 0
-    $maxWidth = ($keys | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum + 3
-    $footer = "↑↓ navigate  ↵ select  Esc/q exit"
+    $footer = '↑↓ navigate  ↵ select  Esc/q exit'
 
     # ── Render loop ────────────────────────────────────────────
     do {
-        # Save cursor position and clear previous render
         [Console]::SetCursorPosition(0, [Console]::CursorTop)
         $startTop = [Console]::CursorTop
 
-        # ── Draw header ────────────────────────────────────────
-        Write-Host ""
-        Write-Host "  ╭$('─' * [Math]::Max($Title.Length + 2, $maxWidth + 2))╮" -ForegroundColor DarkGray
+        # ── Header ─────────────────────────────────────────────
+        Write-Host ''
+        Write-Host "  ╭$('─' * $boxWidth)╮" -ForegroundColor DarkGray
         Write-Host "  │ " -ForegroundColor DarkGray -NoNewline
-        Write-Host $Title.PadRight([Math]::Max($Title.Length, $maxWidth)) -ForegroundColor $accent -NoNewline
-        Write-Host " │" -ForegroundColor DarkGray
-        Write-Host "  ╰$('─' * [Math]::Max($Title.Length + 2, $maxWidth + 2))╯" -ForegroundColor DarkGray
-        Write-Host ""
+        Write-Host $Title.PadRight($boxWidth - 1) -ForegroundColor $accent -NoNewline
+        Write-Host '│' -ForegroundColor DarkGray
+        Write-Host '  ├' -ForegroundColor DarkGray -NoNewline
+        Write-Host ('─' * $boxWidth) -ForegroundColor DarkGray -NoNewline
+        Write-Host '┤' -ForegroundColor DarkGray
 
-        # ── Draw items ─────────────────────────────────────────
+        # ── Items ──────────────────────────────────────────────
         for ($i = 0; $i -lt $keys.Count; $i++) {
             $key = $keys[$i]
-            $label = "  $key"
-            $pad = [Math]::Max(0, $maxWidth - $key.Length + 1)
+            $item = $normalized[$key]
+            $pad = [Math]::Max(0, $boxWidth - $key.Length - ($item.Desc.Length + 2))
 
             if ($i -eq $selected) {
-                Write-Host " ▸ " -ForegroundColor $accent -NoNewline
-                Write-Host $key -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
-                Write-Host (' ' * $pad) -BackgroundColor $highlightBg
-                Write-Host ""  # reset background
+                Write-Host '  │ ' -ForegroundColor DarkGray -NoNewline
+                Write-Host '▸' -ForegroundColor $accent -NoNewline
+                Write-Host " $key " -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
+                if ($item.Desc) {
+                    Write-Host ' ' -BackgroundColor $highlightBg -NoNewline
+                    Write-Host $item.Desc -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
+                }
+                Write-Host (' ' * [Math]::Max(0, $pad - 1)) -BackgroundColor $highlightBg
+                Write-Host '│' -ForegroundColor DarkGray
             } else {
-                Write-Host "   " -NoNewline
-                Write-Host $key -ForegroundColor White
+                Write-Host '  │  ' -ForegroundColor DarkGray -NoNewline
+                Write-Host $key -ForegroundColor White -NoNewline
+                if ($item.Desc) {
+                    Write-Host '  ' -NoNewline
+                    Write-Host $item.Desc -ForegroundColor DarkGray -NoNewline
+                }
+                Write-Host (' ' * [Math]::Max(0, $pad)) -NoNewline
+                Write-Host '│' -ForegroundColor DarkGray
             }
         }
 
-        # ── Draw footer ────────────────────────────────────────
-        Write-Host ""
+        # ── Footer ─────────────────────────────────────────────
+        Write-Host '  ╰' -ForegroundColor DarkGray -NoNewline
+        Write-Host ('─' * $boxWidth) -ForegroundColor DarkGray -NoNewline
+        Write-Host '╯' -ForegroundColor DarkGray
         Write-Host "  $footer" -ForegroundColor DarkGray
 
-        # ── Clear below (in case menu shrank) ──────────────────
+        # ── Clear below (handle shrunken renders) ──────────────
         $endTop = [Console]::CursorTop
-        for ($r = $endTop; $r -le $startTop + $keys.Count + 6; $r++) {
+        for ($r = $endTop; $r -le $startTop + $keys.Count + 8; $r++) {
             [Console]::SetCursorPosition(0, $r)
-            Write-Host (' ' * ($maxWidth + 10)) -NoNewline
+            Write-Host (' ' * ($boxWidth + 6)) -NoNewline
         }
         [Console]::SetCursorPosition(0, $endTop)
 
@@ -108,16 +143,39 @@ function Show-Menu {
             'DownArrow'  { $selected = if ($selected -lt $keys.Count - 1) { $selected + 1 } else { 0 } }
             'Enter'      {
                 $chosenKey = $keys[$selected]
-                $action = $Items[$chosenKey]
+                $item = $normalized[$chosenKey]
                 [Console]::CursorVisible = $prevCursor
-                Clear-Host
-                if ($action -is [scriptblock]) { & $action }
+                if ($Inline) {
+                    # Inline mode: clear just the menu area, run action, then redraw
+                    for ($r = $startTop; $r -le $endTop; $r++) {
+                        [Console]::SetCursorPosition(0, $r)
+                        Write-Host (' ' * ($boxWidth + 10)) -NoNewline
+                    }
+                    [Console]::SetCursorPosition(0, $startTop)
+                    Write-Host ('─' * ($boxWidth + 8)) -ForegroundColor DarkGray
+                    & $item.Action
+                    Write-Host ('─' * ($boxWidth + 8)) -ForegroundColor DarkGray
+                    Write-Host ''
+                    # Continue the loop — menu redraws
+                    [Console]::CursorVisible = $false
+                } else {
+                    Clear-Host
+                    & $item.Action
+                    return
+                }
+            }
+            'Escape'     {
+                [Console]::CursorVisible = $prevCursor
+                if (-not $Inline) { Clear-Host }
                 return
             }
-            'Escape'     { [Console]::CursorVisible = $prevCursor; Clear-Host; return }
-            'Q'          { [Console]::CursorVisible = $prevCursor; Clear-Host; return }
+            'Q'          {
+                [Console]::CursorVisible = $prevCursor
+                if (-not $Inline) { Clear-Host }
+                return
+            }
             default {
-                # Number key shortcut (D0-D9 = 0-9)
+                # Number key shortcut
                 $num = $null
                 if ($keyInfo.Key -ge 'D0' -and $keyInfo.Key -le 'D9') {
                     $num = [int]($keyInfo.Key - 'D0')
@@ -127,14 +185,26 @@ function Show-Menu {
                 if ($num -ne $null) {
                     $match = $keys | Where-Object { $_ -match "^\s*${num}\." }
                     if ($match) {
-                        $action = $Items[$match]
+                        $item = $normalized[$match]
                         [Console]::CursorVisible = $prevCursor
-                        Clear-Host
-                        if ($action -is [scriptblock]) { & $action }
-                        return
+                        if ($Inline) {
+                            for ($r = $startTop; $r -le $endTop; $r++) {
+                                [Console]::SetCursorPosition(0, $r)
+                                Write-Host (' ' * ($boxWidth + 10)) -NoNewline
+                            }
+                            [Console]::SetCursorPosition(0, $startTop)
+                            Write-Host ('─' * ($boxWidth + 8)) -ForegroundColor DarkGray
+                            & $item.Action
+                            Write-Host ('─' * ($boxWidth + 8)) -ForegroundColor DarkGray
+                            Write-Host ''
+                            [Console]::CursorVisible = $false
+                        } else {
+                            Clear-Host
+                            & $item.Action
+                            return
+                        }
                     }
                 }
-                # Any other key: ignore (but could beep if desired)
             }
         }
     } while ($true)

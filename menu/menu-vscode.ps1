@@ -1,67 +1,43 @@
 <#
 .SYNOPSIS
     VS Code management menu.
-.DESCRIPTION
-    View/edit VS Code settings, tasks, agent instructions, extensions.
 .NOTES
     Cesta: ~/Projects/tools/menu/menu-vscode.ps1
 #>
 
 function Show-VSCodeMenu {
     if (-not (Get-Command code -ErrorAction SilentlyContinue)) {
-        Write-Err "VS Code (code) není v PATH."
-        Read-Host "`nStiskni Enter..."
-        return
+        Write-Err "VS Code (code) is not in PATH."
+        Read-Host "`nStiskni Enter..."; return
     }
-
-    $vscDir = Join-Path $env:DOTFILES_TOOLS '.vscode'
-
+    $vsc = Join-Path $env:DOTFILES_TOOLS '.vscode'
     $items = [ordered]@{
-        '1. 📄 View/Edit Settings' = {
-            $path = Join-Path $vscDir 'settings.json'
-            if (Test-Path $path) {
-                Write-Info "Opening $path..."
-                code $path
-            } else { Write-Err "settings.json not found at: $path" }
+        '1. 📄 Settings'       = @{ Action = {
+            $p = Join-Path $vsc 'settings.json'
+            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
             Read-Host "`nStiskni Enter..."
-        }
-        '2. ⚡ View/Edit Tasks' = {
-            $path = Join-Path $vscDir 'tasks.json'
-            if (Test-Path $path) {
-                Write-Info "Opening $path..."
-                code $path
-            } else { Write-Err "tasks.json not found at: $path" }
+        }; Desc = 'Open committed settings.json (Nerd Font, terminal profiles, shell integration)' }
+        '2. ⚡ Tasks'          = @{ Action = {
+            $p = Join-Path $vsc 'tasks.json'
+            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
             Read-Host "`nStiskni Enter..."
-        }
-        '3. 🤖 Agent Instructions' = {
-            $path = Join-Path $vscDir 'agent-instructions.md'
-            if (Test-Path $path) {
-                Write-Info "Opening $path..."
-                code $path
-            } else { Write-Err "agent-instructions.md not found at: $path" }
+        }; Desc = '5 tasks: Pester, install, update, WT fragment, deps' }
+        '3. 🤖 Agent'         = @{ Action = {
+            $p = Join-Path $vsc 'agent-instructions.md'
+            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
             Read-Host "`nStiskni Enter..."
-        }
-        '4. 🧩 Installed Extensions' = {
-            Write-Host "`n  PowerShell-related extensions:" -ForegroundColor Cyan
-            $exts = code --list-extensions 2>&1 | Select-String -Pattern 'powershell|terminal|copilot'
-            if ($exts) {
-                $exts | ForEach-Object { Write-Host "    $_" -ForegroundColor White }
-            } else {
-                Write-Host "    (no PowerShell extensions found)" -ForegroundColor DarkGray
-            }
-            Write-Host "`n  Recommended:" -ForegroundColor Yellow
-            Write-Host "    ms-vscode.powershell" -ForegroundColor DarkGray
-            Write-Host "    GitHub.copilot" -ForegroundColor DarkGray
-            Write-Host "    GitHub.copilot-chat" -ForegroundColor DarkGray
+        }; Desc = 'Copilot/GPT-4/Claude context file (read via #codebase)' }
+        '4. 🧩 Extensions'    = @{ Action = {
+            Write-Host "`n  PowerShell extensions:" -ForegroundColor Cyan
+            code --list-extensions 2>&1 | Select-String 'powershell|terminal|copilot' | ForEach-Object { Write-Host "    $_" }
+            Write-Host "`n  Recommended: ms-vscode.powershell, GitHub.copilot, GitHub.copilot-chat" -ForegroundColor Yellow
             Read-Host "`nStiskni Enter..."
-        }
-        '5. 🖥️  Open in VS Code' = {
-            Write-Info "Opening ~/Projects/tools in VS Code..."
+        }; Desc = 'List PowerShell-related VS Code extensions' }
+        '5. 🖥️  Open Folder'   = @{ Action = {
             code $env:DOTFILES_TOOLS
-        }
-        '6. ↩️  Back' = { return }
+        }; Desc = 'Open ~/Projects/tools in VS Code' }
+        '6. ↩️  Back'          = @{ Action = { return }; Desc = 'Return to main menu' }
     }
-
     Show-Menu -Title 'VS CODE' -Items $items
 }
 

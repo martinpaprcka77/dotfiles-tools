@@ -9,52 +9,38 @@
 
 function Show-DotfilesMenu {
     $items = [ordered]@{
-        '1. 📥 Install / Re-install' = {
-            $script = Join-Path $HOME '.config\powershell\install.ps1'
-            if (Test-Path $script) {
-                Write-Info "Running install.ps1..."; & $script
-            } else { Write-Err "install.ps1 not found at: $script" }
+        '1. 📥 Install/Reinstall'  = @{ Action = {
+            $s = Join-Path $HOME '.config\powershell\install.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "install.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '2. 🔄 Update (git pull)' = {
-            $script = Join-Path $HOME '.config\powershell\update.ps1'
-            if (Test-Path $script) {
-                Write-Info "Running update.ps1..."; & $script
-            } else { Write-Err "update.ps1 not found at: $script" }
+        }; Desc = 'Run install.ps1 — idempotent, safe to re-run' }
+        '2. 🔄 Update (git pull)'  = @{ Action = {
+            $s = Join-Path $HOME '.config\powershell\update.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "update.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '3. ⚙️  Configure Wizard' = {
-            $script = Join-Path $env:DOTFILES_TOOLS 'scripts\configure.ps1'
-            if (Test-Path $script) {
-                & $script
-            } else { Write-Err "configure.ps1 not found" }
+        }; Desc = 'Git pull latest + reload profile' }
+        '3. ⚙️  Configure Wizard'   = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\configure.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "configure.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '4. 🔍 Pre-Check Inventory' = {
-            $script = Join-Path $env:DOTFILES_TOOLS 'scripts\precheck.ps1'
-            if (Test-Path $script) {
-                & $script
-            } else { Write-Err "precheck.ps1 not found" }
+        }; Desc = 'Interactive 5-step setup wizard' }
+        '4. 🔍 Pre-Check'          = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\precheck.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "precheck.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '5. 📦 Install Dependencies' = {
-            $script = Join-Path $env:DOTFILES_TOOLS 'scripts\deps.ps1'
-            if (Test-Path $script) {
-                Write-Info "Running deps.ps1 (this may take a while)..."
-                & $script
-            } else { Write-Err "deps.ps1 not found" }
+        }; Desc = '30+ inventory checks before install' }
+        '5. 📦 Dependencies'       = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\deps.ps1'
+            if (Test-Path $s) { Write-Info "Running deps.ps1..."; & $s } else { Write-Err "deps.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '6. 🪟 Windows Defaults' = {
-            $script = Join-Path $env:DOTFILES_TOOLS 'scripts\windows.ps1'
-            if (Test-Path $script) {
-                Write-Info "Running windows.ps1..."; & $script
-            } else { Write-Err "windows.ps1 not found" }
+        }; Desc = 'Winget auto-installer: Git, PS7, WT, VS Code, Starship' }
+        '6. 🪟 Windows Defaults'   = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\windows.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "windows.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }
-        '7. ↩️  Back' = { return }
+        }; Desc = 'Explorer, taskbar, privacy, bloatware removal' }
+        '7. ↩️  Back'              = @{ Action = { return }; Desc = 'Return to main menu' }
     }
-
     Show-Menu -Title 'DOTFILES' -Items $items
 }
 
