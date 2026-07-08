@@ -38,8 +38,8 @@
     PrivateData = @{
         PSData = @{
             Tags       = @('tools', 'menu', 'diagnostics', 'powershell')
-            LicenseUri = 'https://github.com/USER/dotfiles-tools/blob/main/LICENSE'
-            ProjectUri = 'https://github.com/USER/dotfiles-tools'
+            LicenseUri = 'https://github.com/martinpaprcka77/dotfiles-tools/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/martinpaprcka77/dotfiles-tools'
         }
     }
 }
