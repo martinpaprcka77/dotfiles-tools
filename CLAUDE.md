@@ -8,7 +8,7 @@ Companion: `dotfiles-powershell` at `~/.config/powershell/`.
 
 ## Key files
 - `bin/menu.ps1`, `bin/check.ps1` — entry points (in PATH)
-- `Toolkit/Toolkit.psm1` + `Toolkit.psd1` — module (18 functions)
+- `Toolkit/Toolkit.psm1` + `Toolkit.psd1` — module (22 functions)
 - `lib/menu.ps1` — generic `Show-Menu` engine (numbered, extensible)
 - `lib/checkers.ps1` — `Invoke-SystemCheck` + 4 sub-checks
 - `lib/config.ps1` — 3-layer config merge (defaults→JSON→env)

@@ -2,7 +2,7 @@
     # Module manifest for Toolkit
     RootModule        = 'Toolkit.psm1'
     ModuleVersion     = '1.0.0'
-    GUID              = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+    GUID              = 'd5e3f8a1-9b2c-4d7e-8f3a-1c5b9e2d4f6a'
     Author            = 'USER'
     CompanyName       = ''
     Copyright         = '(c) 2026. MIT License.'

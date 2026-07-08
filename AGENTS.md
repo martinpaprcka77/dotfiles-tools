@@ -15,7 +15,7 @@
 | **Companion repo** | [dotfiles-powershell](https://github.com/martinpaprcka77/dotfiles-powershell) (`~/.config/powershell/`) |
 | **Portal** | [martinpaprcka77.github.io](https://martinpaprcka77.github.io) |
 | **Language** | PowerShell 5.1 / 7+ |
-| **Module** | `Toolkit` — 18 exported functions |
+| **Module** | `Toolkit` — 22 exported functions |
 | **Tests** | 25+ Pester cases in `tests/Toolkit.Tests.ps1` |
 | **Dependencies** | dotfiles-powershell (provides `$env:DOTFILES_TOOLS`), Git, Docker (optional) |
 
@@ -42,7 +42,7 @@
 │   └── config.ps1           ← Get-ToolkitConfig (defaults→JSON→env merge), Save-ToolkitConfig, Merge-Hashtable
 │
 ├── Toolkit/                 ← PowerShell module
-│   ├── Toolkit.psd1         ← manifest — 18 FunctionsToExport
+│   ├── Toolkit.psd1         ← manifest — 22 FunctionsToExport
 │   └── Toolkit.psm1         ← dot-sources all lib/*.ps1, Export-ModuleMember
 │
 ├── menu/                    ← standalone scripts (can run directly or via module)
@@ -124,7 +124,7 @@ Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
 
 ---
 
-## Toolk module — 18 exported functions
+## Toolkit module — 22 exported functions
 
 | Category | Functions |
 |----------|-----------|

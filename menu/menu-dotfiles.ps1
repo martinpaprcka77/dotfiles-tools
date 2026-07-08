@@ -80,7 +80,7 @@ function Show-DotfilesMenu {
             if (Test-Path $s) { & $s } else { Write-Err "windows.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Explorer, taskbar, privacy, bloatware removal' }
-        '0. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
+        '9. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'DOTFILES' -Items $items
 }

@@ -1,6 +1,6 @@
 # dotfiles-tools
 
-> **PowerShell toolbox** — interactive menus, system diagnostics, Docker & Git helpers, Toolkit module with 18 functions.
+> **PowerShell toolbox** — interactive menus, system diagnostics, Docker & Git helpers, Toolkit module with 22 functions.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--tools-blue)](#)
 [![files](https://img.shields.io/badge/files-24-green)](#)
@@ -29,7 +29,7 @@
 | What | Details |
 |------|---------|
 | **Location** | `~/Projects/tools/` |
-| **18 functions** | Toolkit module — menu engine, diagnostics, utilities, logging |
+| **22 functions** | Toolkit module — menu engine, diagnostics, utilities, logging, config |
 | **5 bin scripts** | `menu.ps1`, `check.ps1`, `configure.ps1`, `setup-repos.ps1` + scripts |
 | **3 interactive menus** | Main, Docker, Git (numbered, extensible) |
 | **4 helper scripts** | Add-WTProfiles, Generate-Icons, configure, setup-repos |
@@ -47,7 +47,7 @@ graph TB
     end
 
     subgraph "Toolkit Module"
-        PSD1["📦 Toolkit.psd1<br/>(manifest, 18 exports)"]
+        PSD1["📦 Toolkit.psd1<br/>(manifest, 22 exports)"]
         PSM1["📦 Toolkit.psm1<br/>(dot-sources lib/)"]
     end
 
@@ -123,14 +123,18 @@ Invoke-SystemCheck
 
 ---
 
-## 📦 Toolkit Module — 18 Functions
+## 📦 Toolkit Module — 22 Functions
 
 | Category | Function | Purpose |
 |----------|----------|---------|
-| **Menu** | `Start-MainMenu` | Main interactive menu |
+| **Menu** | `Start-MainMenu` | Main interactive menu (9 items) |
 | | `Show-DockerMenu` | Docker container management |
 | | `Show-GitMenu` | Git operations |
-| | `Show-Menu` | Generic numbered menu engine |
+| | `Show-TerminalMenu` | WT profiles, schemes, fonts, shell integration |
+| | `Show-DotfilesMenu` | Install, update, backup, restore, clean |
+| | `Show-PwshMenu` | Profile edit, reload, benchmark, performance |
+| | `Show-VSCodeMenu` | VS Code settings, tasks, agent, extensions |
+| | `Show-Menu` | Generic arrow-key menu engine |
 | **Diagnostics** | `Invoke-SystemCheck` | Full system health check |
 | | `Get-DiskStatus` | Disk space & usage |
 | | `Get-ServiceStatus` | Key services (WinRM, Docker, …) |
@@ -160,17 +164,24 @@ Invoke-SystemCheck
 │   ├── checkers.ps1          ← disk, services, network, processes
 │   └── config.ps1            ← 3-layer config (defaults → JSON → env)
 ├── Toolkit/
-│   ├── Toolkit.psd1          ← module manifest (18 exports)
+│   ├── Toolkit.psd1          ← module manifest (22 exports)
 │   └── Toolkit.psm1          ← module body
 ├── menu/
 │   ├── menu-main.ps1         ← Start-MainMenu
 │   ├── menu-docker.ps1       ← Show-DockerMenu
-│   └── menu-git.ps1          ← Show-GitMenu
+│   ├── menu-git.ps1          ← Show-GitMenu
+│   ├── menu-terminal.ps1     ← Show-TerminalMenu
+│   ├── menu-dotfiles.ps1     ← Show-DotfilesMenu
+│   ├── menu-pwsh.ps1         ← Show-PwshMenu
+│   └── menu-vscode.ps1       ← Show-VSCodeMenu
 ├── scripts/
-│   ├── Add-WTProfiles.ps1    ← Windows Terminal setup (4 profiles)
+│   ├── Add-WTProfiles.ps1    ← WT fragment generator (4 profiles + 7 schemes)
 │   ├── Generate-Icons.ps1    ← PNG icon generator
 │   ├── configure.ps1         ← interactive config wizard
-│   └── setup-repos.ps1       ← Git+GitHub automation
+│   ├── setup-repos.ps1       ← Git+GitHub automation
+│   ├── deps.ps1              ← winget dependency installer
+│   ├── windows.ps1           ← Windows defaults (Explorer, privacy)
+│   └── precheck.ps1          ← 30+ inventory checks
 ├── configs/settings.json     ← default config
 ├── tests/Toolkit.Tests.ps1   ← 25+ Pester test cases
 ├── docs/                     ← ARCHITECTURE, MANUAL, ROADMAP, PROMPT
@@ -197,7 +208,7 @@ Install-Module Pester -Force
 Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
 ```
 
-**25+ test cases** across 6 contexts: module structure, 18 function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks.
+**25+ test cases** across 6 contexts: module structure, 22 function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks.
 
 ---
 
