@@ -45,13 +45,15 @@ function Show-PwshMenu {
                 ForEach-Object { Write-Host "    $($_.Name) v$($_.Version)" -ForegroundColor White }
             Read-Host "`nStiskni Enter..."
         }
-        '5. 🔤 Active Aliases' = {
-            Write-Host "`n  Custom aliases:" -ForegroundColor Cyan
-            Get-Alias | Where-Object { $_.Options -eq 'None' -or $_.Options -eq 'ReadOnly' } |
-                Select-Object Name, Definition |
-                Sort-Object Name |
-                ForEach-Object { Write-Host "    $($_.Name) → $($_.Definition)" -ForegroundColor White }
-            Read-Host "`nStiskni Enter..."
+        '5. ⚡ Performance' = {
+            $items = [ordered]@{
+                '1. Run Benchmark'    = { Measure-Profile }
+                '2. Module Analysis'  = { Optimize-ModuleLoading }
+                '3. Profile Size'     = { Get-ProfileSize }
+                '4. Clear Cache'      = { Clear-PSCache }
+                '5. ↩️  Back'           = { return }
+            }
+            Show-Menu -Title 'PERFORMANCE' -Items $items
         }
         '6. 🔧 Toolkit Functions' = {
             Write-Host "`n  Toolkit module functions (19):" -ForegroundColor Cyan
