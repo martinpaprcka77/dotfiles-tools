@@ -75,14 +75,45 @@ Install-Pkg -Id 'JanDeDobbeleer.OhMyPosh' -Name 'oh-my-posh'
 
 # ── Fonts ──────────────────────────────────────────────────────
 Write-Host "`n--- FONTS ---" -ForegroundColor Magenta
-# Cascadia Code Nerd Font — needed for oh-my-posh glyphs
-$fontInstalled = winget list --id 'DEVCOM.JetBrainsMonoNerdFont' --exact 2>&1 | Select-String 'JetBrains'
-if ($fontInstalled) {
-    Write-Skip "Nerd Font already installed"
+
+$fontName = 'CaskaydiaCove NF'
+$fontRegPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
+$fontFile = 'CaskaydiaCoveNerdFont-Regular.ttf'
+$alreadyInstalled = Get-ItemProperty -Path $fontRegPath -Name "*$fontName*" -ErrorAction SilentlyContinue
+
+if ($alreadyInstalled) {
+    Write-Skip "Cascadia Code Nerd Font already installed"
 } else {
-    Write-Step "Cascadia Code Nerd Font — install manually:"
-    Write-Host "  https://github.com/ryanoasis/nerd-fonts/releases" -ForegroundColor Yellow
-    Write-Host "  Download CascadiaCode.zip, extract, select all .ttf, right-click → Install" -ForegroundColor Yellow
+    Write-Step "Installing Cascadia Code Nerd Font (Caskaydia Cove NF)..."
+    if ($PSCmdlet.ShouldProcess('Cascadia Code Nerd Font', 'Download and install')) {
+        try {
+            $fontZip = Join-Path $env:TEMP 'CascadiaCodeNF.zip'
+            $fontDir = Join-Path $env:TEMP 'CascadiaCodeNF'
+
+            # Download latest Nerd Font patched Cascadia Code
+            $nfUrl = 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.zip'
+            Write-Host "  Downloading from $nfUrl ..." -ForegroundColor DarkGray
+            Invoke-WebRequest -Uri $nfUrl -OutFile $fontZip -UseBasicParsing
+
+            # Extract
+            Expand-Archive -Path $fontZip -DestinationPath $fontDir -Force
+
+            # Install all .ttf files
+            $ttfFiles = Get-ChildItem -Path $fontDir -Filter '*.ttf' -Recurse
+            $fontCollection = New-Object -ComObject Shell.Application
+            foreach ($ttf in $ttfFiles) {
+                $fontCollection.Namespace(0x14).CopyHere($ttf.FullName, 0x10)
+            }
+            Write-Ok "Installed $($ttfFiles.Count) font files (Cascadia Code Nerd Font)"
+
+            # Cleanup
+            Remove-Item $fontZip -ErrorAction SilentlyContinue
+            Remove-Item $fontDir -Recurse -ErrorAction SilentlyContinue
+        } catch {
+            Write-Fail "Font install failed: $_"
+            Write-Host "  Manual install: https://github.com/ryanoasis/nerd-fonts/releases/latest" -ForegroundColor Yellow
+        }
+    }
 }
 
 # ── PowerShell modules ─────────────────────────────────────────
