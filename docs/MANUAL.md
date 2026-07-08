@@ -272,3 +272,121 @@ $items = [ordered]@{
 #    - Toolkit.psm1: Export-ModuleMember -Function @(...)
 #    - Toolkit.psd1: FunctionsToExport = @(...)
 ```
+
+---
+
+## 12. CRUD operace — Check, Backup, Restore, Reset, Clean
+
+Každé submenu obsahuje konzistentní operace pro správu:
+
+### 📊 Check Status
+```powershell
+# Globální dashboard (menu → 1. Status)
+Show-Status
+
+# Nebo z PowerShell submenu:
+menu → 6. PowerShell → 1. Check Status
+```
+Kontroluje: Dotfiles profily, WT fragment, VS Code configs, moduly, Git repozitáře, Docker.
+
+### 💾 Backup
+```powershell
+# Záloha všech profilů (menu → 2. Dotfiles → 4. Backup Profiles)
+# Ukládá do: ~/.config/powershell/backups/
+
+# Záloha WT fragmentu (menu → 5. Terminal → 3. Backup Fragment)
+# Záloha profile.ps1 (menu → 6. PowerShell → 4. Backup Profile)
+# Záloha VS Code configs (menu → 7. VS Code → 5. Backup Settings)
+```
+
+### ♻️ Restore
+```powershell
+# Obnova z časově označené zálohy:
+# menu → Dotfiles/Terminal/PowerShell/VS Code → Restore
+# Vyber číslo zálohy ze seznamu
+```
+
+### ♻️ Reset
+```powershell
+# Reset WT fragmentu na výchozí:
+menu → 5. Terminal → 5. Reset to Default
+
+# Vyčištění PowerShell cache:
+menu → 6. PowerShell → 5. Performance → 4. Clear Cache
+```
+
+### 🧹 Clean
+```powershell
+# Smazání starých záloh: menu → 2. Dotfiles → 6. Clean Backups
+# Docker prune:         menu → 3. Docker → 7. Prune
+# Git clean:            menu → 4. Git → 7. Clean
+```
+
+---
+
+## 13. Performance nástroje
+
+### Measure-Profile
+```powershell
+# Detailní měření doby načtení profilu (menu → 6. PowerShell → 5. Performance → 1. Run Benchmark)
+Measure-Profile
+# Výstup: breakdown podle sekcí, loaded moduly, doporučení
+# Barevné hodnocení: 🟢 <500ms, 🟡 <1000ms, 🔴 >1000ms
+```
+
+### Optimize-ModuleLoading
+```powershell
+# Analýza načtených modulů + lazy loading návrhy
+Optimize-ModuleLoading
+```
+
+### Clear-PSCache
+```powershell
+# Vyčištění corrupted cache (ModuleAnalysisCache, StartupProfileData)
+Clear-PSCache
+# Po spuštění restartuj PowerShell
+```
+
+### Get-ProfileSize
+```powershell
+# Velikost profilu (řádky, byty, soubory)
+Get-ProfileSize
+```
+
+---
+
+## 14. Status Dashboard
+
+```powershell
+# Globální health check (menu → 1. Status)
+Show-Status
+```
+
+Kontroluje 6 oblastí s 20+ indikátory:
+- **Dotfiles**: profil, bootstrap, PATH, env proměnné
+- **Terminal**: fragment, profily, schémata, shell integration
+- **PowerShell**: verze, PSReadLine, Toolkit, Starship, moduly
+- **VS Code**: code v PATH, committed configs
+- **Git**: instalace, oba repozitáře
+- **Docker**: instalace, běžící kontejnery
+
+Výstup: ✅ OK / ⚠️ Warning / ❌ Fail s barevným kódováním.
+
+---
+
+## 15. Aktuální menu struktura
+
+```
+HLAVNÍ MENU (9 položek)
+├── 1. 📊 Status        → Show-Status (globální dashboard)
+├── 2. ⚡ Dotfiles       → install, update, backup, restore, clean, configure, deps, windows (9 položek)
+├── 3. 🔍 Systém         → Invoke-SystemCheck (disky, služby, síť, procesy)
+├── 4. 🐳 Docker         → check, containers, images, stats, disk, logs, prune (7 položek)
+├── 5. 📋 Git            → check, log, branches, remotes, stash, commit, clean (7 položek)
+├── 6. 🖥️  Terminal       → check, generate, backup, restore, reset, schemes, fonts (7 položek)
+├── 7. 💻 PowerShell     → check, edit, reload, backup, restore, performance, modules (7 položek)
+├── 8. 📝 VS Code        → check, settings, tasks, agent, backup, restore, extensions, open (8 položek)
+└── 9. 🚪 Exit
+```
+
+Všechny položky mají popisky zobrazené při zvýraznění. Menu používá arrow-key navigaci (↑↓) a inline režim (výstup se zobrazuje pod menu).
