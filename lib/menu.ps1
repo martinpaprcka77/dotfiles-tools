@@ -130,7 +130,8 @@ function Show-Menu {
 
         # ── Clear below (handle shrunken renders) ──────────────
         $endTop = [Console]::CursorTop
-        for ($r = $endTop; $r -le $startTop + $keys.Count + 8; $r++) {
+        $maxRow = [Console]::BufferHeight - 1
+        for ($r = $endTop; $r -le $startTop + $keys.Count + 8 -and $r -le $maxRow; $r++) {
             [Console]::SetCursorPosition(0, $r)
             Write-Host (' ' * ($boxWidth + 6)) -NoNewline
         }
@@ -147,7 +148,7 @@ function Show-Menu {
                 [Console]::CursorVisible = $prevCursor
                 if ($Inline) {
                     # Inline mode: clear just the menu area, run action, then redraw
-                    for ($r = $startTop; $r -le $endTop; $r++) {
+                    for ($r = $startTop; $r -le $endTop -and $r -le [Console]::BufferHeight - 1; $r++) {
                         [Console]::SetCursorPosition(0, $r)
                         Write-Host (' ' * ($boxWidth + 10)) -NoNewline
                     }
@@ -188,7 +189,7 @@ function Show-Menu {
                         $item = $normalized[$match]
                         [Console]::CursorVisible = $prevCursor
                         if ($Inline) {
-                            for ($r = $startTop; $r -le $endTop; $r++) {
+                            for ($r = $startTop; $r -le $endTop -and $r -le [Console]::BufferHeight - 1; $r++) {
                                 [Console]::SetCursorPosition(0, $r)
                                 Write-Host (' ' * ($boxWidth + 10)) -NoNewline
                             }
