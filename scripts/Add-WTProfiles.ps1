@@ -91,6 +91,9 @@ $fragment = @{
             colorScheme  = 'One Half Dark'
             useAtlasEngine = $true
             antialiasingMode = 'cleartype'
+            # Shell integration — show command marks in scrollbar
+            showMarksOnScrollbar = $true
+            autoMarkPrompts = $true
         }
         # Updates Windows PowerShell 5.1 built-in profile
         @{
