@@ -165,6 +165,46 @@ $fragment = @{
             background = '#2e3440'
             foreground = '#d8dee9'
         }
+        @{
+            name = 'TokyoNight'
+            black = '#363b54'; red = '#f7768e'; green = '#41a6b5'
+            yellow = '#e0af68'; blue = '#7aa2f7'; purple = '#bb9af7'
+            cyan = '#7dcfff'; white = '#787c99'
+            brightBlack = '#363b54'; brightRed = '#f7768e'; brightGreen = '#41a6b5'
+            brightYellow = '#e0af68'; brightBlue = '#7aa2f7'; brightPurple = '#bb9af7'
+            brightCyan = '#7dcfff'; brightWhite = '#acb0d0'
+            background = '#16161e'; foreground = '#787c99'
+        }
+        @{
+            name = 'Catppuccin Mocha'
+            black = '#45475a'; red = '#f38ba8'; green = '#a6e3a1'
+            yellow = '#f9e2af'; blue = '#89b4fa'; purple = '#f5c2e7'
+            cyan = '#94e2d5'; white = '#bac2de'
+            brightBlack = '#585b70'; brightRed = '#f38ba8'; brightGreen = '#a6e3a1'
+            brightYellow = '#f9e2af'; brightBlue = '#89b4fa'; brightPurple = '#f5c2e7'
+            brightCyan = '#94e2d5'; brightWhite = '#a6adc8'
+            background = '#1e1e2e'; foreground = '#cdd6f4'
+        }
+        @{
+            name = 'Gruvbox Dark'
+            black = '#282828'; red = '#cc241d'; green = '#98971a'
+            yellow = '#d79921'; blue = '#458588'; purple = '#b16286'
+            cyan = '#689d6a'; white = '#a89984'
+            brightBlack = '#928374'; brightRed = '#fb4934'; brightGreen = '#b8bb26'
+            brightYellow = '#fabd2f'; brightBlue = '#83a598'; brightPurple = '#d3869b'
+            brightCyan = '#8ec07c'; brightWhite = '#ebdbb2'
+            background = '#282828'; foreground = '#ebdbb2'
+        }
+        @{
+            name = 'Solarized Dark'
+            black = '#073642'; red = '#dc322f'; green = '#859900'
+            yellow = '#b58900'; blue = '#268bd2'; purple = '#d33682'
+            cyan = '#2aa198'; white = '#eee8d5'
+            brightBlack = '#002b36'; brightRed = '#cb4b16'; brightGreen = '#586e75'
+            brightYellow = '#657b83'; brightBlue = '#839496'; brightPurple = '#6c71c4'
+            brightCyan = '#93a1a1'; brightWhite = '#fdf6e3'
+            background = '#002b36'; foreground = '#839496'
+        }
     )
 }
 
