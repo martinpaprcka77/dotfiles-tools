@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Docker submenu with arrow-key navigation.
+    Docker management menu.
 .NOTES
     Cesta: ~/Projects/tools/menu/menu-docker.ps1
 #>
@@ -11,12 +11,19 @@ function Show-DockerMenu {
         Read-Host "`nStiskni Enter..."; return
     }
     $items = [ordered]@{
-        '1. 📦 Containers' = @{ Action = { docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; Read-Host "`nStiskni Enter..." }; Desc = 'List all containers with status and ports' }
-        '2. 🖼️  Images'     = @{ Action = { docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'; Read-Host "`nStiskni Enter..." }; Desc = 'List all images with size' }
-        '3. 📊 Stats'      = @{ Action = { docker stats --no-stream; Read-Host "`nStiskni Enter..." }; Desc = 'Live CPU/memory per container' }
-        '4. 💾 Disk'       = @{ Action = { docker system df; Read-Host "`nStiskni Enter..." }; Desc = 'Docker disk usage summary' }
-        '5. 📜 Logs'       = @{ Action = { $n = Read-Host 'Container name'; docker logs --tail 50 $n 2>&1; Read-Host "`nStiskni Enter..." }; Desc = 'Last 50 log lines from a container' }
-        '6. ↩️  Back'       = @{ Action = { return }; Desc = 'Return to main menu' }
+        '1. 📊 Check Status' = @{ Action = { docker info --format '{{.Containers}} containers, {{.Images}} images, {{.ServerVersion}}' 2>&1; Read-Host "`nStiskni Enter..." }; Desc = 'Quick Docker daemon status' }
+        '2. 📦 Containers'   = @{ Action = { docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'; Read-Host "`nStiskni Enter..." }; Desc = 'All containers with status and ports' }
+        '3. 🖼️  Images'       = @{ Action = { docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'; Read-Host "`nStiskni Enter..." }; Desc = 'All images with size' }
+        '4. 📊 Stats'        = @{ Action = { docker stats --no-stream; Read-Host "`nStiskni Enter..." }; Desc = 'Live CPU/memory per container' }
+        '5. 💾 Disk'         = @{ Action = { docker system df; Read-Host "`nStiskni Enter..." }; Desc = 'Docker disk usage summary' }
+        '6. 📜 Logs'         = @{ Action = { $n = Read-Host 'Container name'; docker logs --tail 50 $n 2>&1; Read-Host "`nStiskni Enter..." }; Desc = 'Last 50 log lines from a container' }
+        '7. 🧹 Prune'        = @{ Action = {
+            Write-Warn "This will remove all stopped containers, unused networks, dangling images, and build cache."
+            $c = Read-Host "Continue? (y/N)"
+            if ($c -eq 'y') { docker system prune -af --volumes 2>&1; Write-Success "Pruned." }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Docker system prune -af (⚠️ destructive!)' }
+        '8. ↩️  Back'         = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'DOCKER' -Items $items
 }

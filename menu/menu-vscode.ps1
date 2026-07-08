@@ -12,31 +12,64 @@ function Show-VSCodeMenu {
     }
     $vsc = Join-Path $env:DOTFILES_TOOLS '.vscode'
     $items = [ordered]@{
-        '1. 📄 Settings'       = @{ Action = {
+        '1. 📊 Check Status'  = @{ Action = {
+            Write-Host "`n  Committed configs:" -ForegroundColor Cyan
+            @('settings.json', 'tasks.json', 'agent-instructions.md') | ForEach-Object {
+                $p = Join-Path $vsc $_
+                if (Test-Path $p) { Write-Host "    ✅ $_ ($((Get-Item $p).Length) bytes)" -ForegroundColor Green }
+                else { Write-Host "    ❌ $_" -ForegroundColor Red }
+            }
+            Write-Host "`n  Extensions:" -ForegroundColor Cyan
+            code --list-extensions 2>&1 | Select-String 'powershell|terminal|copilot' | ForEach-Object { Write-Host "    $_" }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Committed files + PowerShell extensions' }
+        '2. 📄 Settings'      = @{ Action = {
             $p = Join-Path $vsc 'settings.json'
-            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
+            if (Test-Path $p) { code $p } else { Write-Err "Not found" }
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'Open committed settings.json (Nerd Font, terminal profiles, shell integration)' }
-        '2. ⚡ Tasks'          = @{ Action = {
+        }; Desc = 'Open committed settings.json' }
+        '3. ⚡ Tasks'         = @{ Action = {
             $p = Join-Path $vsc 'tasks.json'
-            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
+            if (Test-Path $p) { code $p } else { Write-Err "Not found" }
             Read-Host "`nStiskni Enter..."
-        }; Desc = '5 tasks: Pester, install, update, WT fragment, deps' }
-        '3. 🤖 Agent'         = @{ Action = {
+        }; Desc = '5 tasks: Pester, install, update, WT, deps' }
+        '4. 🤖 Agent'         = @{ Action = {
             $p = Join-Path $vsc 'agent-instructions.md'
-            if (Test-Path $p) { code $p } else { Write-Err "Not found: $p" }
+            if (Test-Path $p) { code $p } else { Write-Err "Not found" }
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'Copilot/GPT-4/Claude context file (read via #codebase)' }
-        '4. 🧩 Extensions'    = @{ Action = {
-            Write-Host "`n  PowerShell extensions:" -ForegroundColor Cyan
+        }; Desc = 'Copilot agent context file' }
+        '5. 💾 Backup Settings' = @{ Action = {
+            $backupDir = Join-Path $env:DOTFILES_TOOLS '.vscode\backups'
+            New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+            $ts = Get-Date -Format 'yyyyMMdd-HHmmss'
+            @('settings.json', 'tasks.json', 'agent-instructions.md') | ForEach-Object {
+                $p = Join-Path $vsc $_
+                if (Test-Path $p) { Copy-Item $p (Join-Path $backupDir "$_.$ts.bak") }
+            }
+            Write-Success "Backed up to: $backupDir"
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Save settings/tasks/agent with timestamp' }
+        '6. ♻️  Restore Settings' = @{ Action = {
+            $backupDir = Join-Path $env:DOTFILES_TOOLS '.vscode\backups'
+            $backups = Get-ChildItem $backupDir -Filter '*.bak' -ErrorAction SilentlyContinue | Sort LastWriteTime -Desc
+            if (-not $backups) { Write-Warn "No backups."; Read-Host "`nStiskni Enter..."; return }
+            Write-Host "`n  Backups:" -ForegroundColor Cyan
+            for ($i=0; $i -lt $backups.Count; $i++) { Write-Host "    $($i+1). $($backups[$i].Name)" }
+            $c = Read-Host "`n  Restore which?"
+            if ($c -match '^\d+$' -and [int]$c -ge 1 -and [int]$c -le $backups.Count) {
+                $origName = $backups[[int]$c-1].Name -replace '\.\d{8}-\d{6}\.bak$', ''
+                Copy-Item $backups[[int]$c-1].FullName (Join-Path $vsc $origName) -Force
+                Write-Success "Restored: $origName"
+            }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Restore from timestamped backup' }
+        '7. 🧩 Extensions'    = @{ Action = {
             code --list-extensions 2>&1 | Select-String 'powershell|terminal|copilot' | ForEach-Object { Write-Host "    $_" }
             Write-Host "`n  Recommended: ms-vscode.powershell, GitHub.copilot, GitHub.copilot-chat" -ForegroundColor Yellow
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'List PowerShell-related VS Code extensions' }
-        '5. 🖥️  Open Folder'   = @{ Action = {
-            code $env:DOTFILES_TOOLS
-        }; Desc = 'Open ~/Projects/tools in VS Code' }
-        '6. ↩️  Back'          = @{ Action = { return }; Desc = 'Return to main menu' }
+        }; Desc = 'PowerShell-related extensions' }
+        '8. 🖥️  Open Folder'   = @{ Action = { code $env:DOTFILES_TOOLS }; Desc = 'Open ~/Projects/tools in VS Code' }
+        '9. ↩️  Back'          = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'VS CODE' -Items $items
 }

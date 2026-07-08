@@ -1,50 +1,72 @@
 <#
 .SYNOPSIS
-    Windows Terminal management menu.
+    Windows Terminal management — profiles, schemes, fonts, shell integration, backup, restore.
 .NOTES
     Cesta: ~/Projects/tools/menu/menu-terminal.ps1
 #>
 
 function Show-TerminalMenu {
+    $fragPath = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json"
     $items = [ordered]@{
-        '1. 🔄 Generate Profiles' = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\Add-WTProfiles.ps1'
-            if (Test-Path $s) { & $s } else { Write-Err "Add-WTProfiles.ps1 not found" }
-            Read-Host "`nStiskni Enter..."
-        }; Desc = 'Create/update WT JSON fragment with 4 profiles + 7 schemes' }
-        '2. 🎨 Color Schemes'     = @{ Action = {
-            $fp = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json"
-            if (-not (Test-Path $fp)) { Write-Warn "Fragment not found. Run Generate Profiles first."; Read-Host "`nStiskni Enter..."; return }
-            $f = Get-Content $fp -Raw | ConvertFrom-Json
-            $schemes = $f.schemes | ForEach-Object { $_.name }
-            Write-Host "`n  Available schemes:" -ForegroundColor Cyan
-            for ($i = 0; $i -lt $schemes.Count; $i++) { Write-Host "    $($i+1). $($schemes[$i])" }
-            $c = Read-Host "`n  Pick (1-$($schemes.Count))"
-            if ($c -match '^\d+$' -and [int]$c -ge 1 -and [int]$c -le $schemes.Count) {
-                Write-Success "Selected: $($schemes[[int]$c-1]) — regenerate fragment to apply"
-            }
-            Read-Host "`nStiskni Enter..."
-        }; Desc = 'Browse 7 built-in color schemes (One Half Dark, Dracula, Nord, ...)' }
-        '3. 🔤 Fonts'            = @{ Action = {
-            Write-Host "`n  Recommended Nerd Fonts:" -ForegroundColor Cyan
-            $f = @('CaskaydiaCove NF (installed)', 'Cascadia Code PL (ships with WT)', 'JetBrainsMono NF', 'FiraCode NF', 'Hack NF', 'MesloLGS NF')
-            $f | ForEach-Object { Write-Host "    $_" }
-            Write-Host "`n  💡 Set in WT → Settings → Profiles → Appearance → Font face" -ForegroundColor Yellow
-            Read-Host "`nStiskni Enter..."
-        }; Desc = '6 Nerd Font recommendations with install sources' }
-        '4. 🔌 Shell Integration' = @{ Action = {
-            Write-Host "`n  Status:" -ForegroundColor Cyan
-            $fp = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json"
-            if (Test-Path $fp) {
-                $f = Get-Content $fp -Raw | ConvertFrom-Json
+        '1. 📊 Check Status'     = @{ Action = {
+            if (Test-Path $fragPath) {
+                $f = Get-Content $fragPath -Raw | ConvertFrom-Json
+                Write-Host "`n  Profiles: $(@($f.profiles).Count)" -ForegroundColor White
+                Write-Host "  Schemes:  $(@($f.schemes).Count)" -ForegroundColor White
                 $p = $f.profiles | Where-Object { $_.name -eq 'PowerShell 7' }
-                Write-Host "    showMarksOnScrollbar: $(if($p.showMarksOnScrollbar){'✅ ON'}else{'❌ OFF'})"
-                Write-Host "    autoMarkPrompts:      $(if($p.autoMarkPrompts){'✅ ON'}else{'❌ OFF'})"
-            }
-            Write-Host "`n  OSC 133 markers active from: hosts/shell-integration.ps1" -ForegroundColor DarkGray
+                Write-Host "  Font:     $($p.font.face) $($p.font.size)pt" -ForegroundColor White
+                Write-Host "  Scheme:   $($p.colorScheme)" -ForegroundColor White
+                Write-Host "  Marks:    $(if($p.showMarksOnScrollbar){'ON'}else{'OFF'})" -ForegroundColor White
+            } else { Write-Warn "Fragment not found. Run Generate first." }
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'Command marks, scrollbar dots, Ctrl+Up/Down navigation' }
-        '5. ↩️  Back'             = @{ Action = { return }; Desc = 'Return to main menu' }
+        }; Desc = 'Current fragment: profiles, schemes, font, marks status' }
+        '2. 🔄 Generate/Update'  = @{ Action = {
+            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\Add-WTProfiles.ps1'
+            if (Test-Path $s) { & $s } else { Write-Err "Not found" }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Create/update JSON fragment with 4 profiles + 7 schemes' }
+        '3. 💾 Backup Fragment'  = @{ Action = {
+            if (-not (Test-Path $fragPath)) { Write-Warn "No fragment to backup."; Read-Host "`nStiskni Enter..."; return }
+            $backup = "$fragPath.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+            Copy-Item $fragPath $backup
+            Write-Success "Backup: $backup"
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Save fragment copy with timestamp' }
+        '4. ♻️  Restore Fragment' = @{ Action = {
+            $dir = Split-Path $fragPath -Parent
+            $backups = Get-ChildItem $dir -Filter 'dotfiles.json.backup.*' -ErrorAction SilentlyContinue | Sort LastWriteTime -Desc
+            if (-not $backups) { Write-Warn "No backups found."; Read-Host "`nStiskni Enter..."; return }
+            Write-Host "`n  Backups:" -ForegroundColor Cyan
+            for ($i=0; $i -lt $backups.Count; $i++) { Write-Host "    $($i+1). $($backups[$i].Name)" }
+            $c = Read-Host "`n  Restore which?"
+            if ($c -match '^\d+$' -and [int]$c -ge 1 -and [int]$c -le $backups.Count) {
+                Copy-Item $backups[[int]$c-1].FullName $fragPath -Force
+                Write-Success "Restored. Restart WT to apply."
+            }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Restore fragment from a backup' }
+        '5. ♻️  Reset to Default' = @{ Action = {
+            $c = Read-Host "Delete fragment and regenerate? (y/N)"
+            if ($c -eq 'y') {
+                Remove-Item $fragPath -Force -ErrorAction SilentlyContinue
+                $s = Join-Path $env:DOTFILES_TOOLS 'scripts\Add-WTProfiles.ps1'
+                if (Test-Path $s) { & $s }
+            }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Delete fragment, regenerate from scratch' }
+        '6. 🎨 Color Schemes'    = @{ Action = {
+            if (-not (Test-Path $fragPath)) { Write-Warn "Fragment not found."; Read-Host "`nStiskni Enter..."; return }
+            $f = Get-Content $fragPath -Raw | ConvertFrom-Json
+            $schemes = $f.schemes | ForEach-Object { $_.name }
+            for ($i=0; $i -lt $schemes.Count; $i++) { Write-Host "    $($i+1). $($schemes[$i])" }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Browse 7 built-in schemes' }
+        '7. 🔤 Fonts'           = @{ Action = {
+            Write-Host "`n  Recommended Nerd Fonts: CascadiaCove NF, JetBrainsMono NF, FiraCode NF, Hack NF, MesloLGS NF" -ForegroundColor White
+            Write-Host "  Set in WT → Profiles → PowerShell 7 → Appearance → Font face" -ForegroundColor Yellow
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Nerd Font recommendations with install sources' }
+        '8. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'TERMINAL' -Items $items
 }
