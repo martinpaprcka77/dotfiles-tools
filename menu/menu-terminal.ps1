@@ -66,7 +66,18 @@ function Show-TerminalMenu {
             Write-Host "  Set in WT → Profiles → PowerShell 7 → Appearance → Font face" -ForegroundColor Yellow
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Nerd Font recommendations with install sources' }
-        '8. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
+        '8. 🐧 WSL Profiles'    = @{ Action = {
+            if (Get-Command wsl -ErrorAction SilentlyContinue) {
+                $distros = wsl -l -q 2>&1 | Where-Object { $_ -match '\S' -and $_ -notmatch 'Windows Subsystem' }
+                if ($distros) {
+                    Write-Host "`n  Detected WSL distros:" -ForegroundColor Cyan
+                    foreach ($d in $distros) { Write-Host "    🐧 $($d.Trim())" -ForegroundColor White }
+                    Write-Host "`n  Run 'Generate/Update Profiles' to add WSL profiles to WT fragment." -ForegroundColor Yellow
+                } else { Write-Host "`n  No WSL distros found." -ForegroundColor Gray }
+            } else { Write-Host "`n  WSL not installed. Install: wsl --install" -ForegroundColor Yellow }
+            Read-Host "`nStiskni Enter..."
+        }; Desc = 'Auto-detected WSL distros for WT profiles' }
+        '9. ↩️  Back'            = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'TERMINAL' -Items $items
 }

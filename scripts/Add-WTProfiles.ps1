@@ -104,6 +104,32 @@ $fragment = @{
             tabTitle     = 'PS 5'
         }
     )
+    # ── WSL profiles (auto-detected) ────────────────────────
+    $wslProfiles = @()
+    if (Get-Command wsl -ErrorAction SilentlyContinue) {
+        $distros = wsl -l -q 2>&1 | Where-Object { $_ -match '\S' -and $_ -notmatch 'Windows Subsystem' }
+        foreach ($d in $distros) {
+            $d = $d.Trim()
+            if ($d) {
+                $wslProfiles += @{
+                    name         = "WSL: $d"
+                    commandline  = "wsl.exe -d $d"
+                    startingDirectory = "//wsl$/Ubuntu/home"
+                    tabTitle     = "🐧 $d"
+                    font         = @{ face = 'CaskaydiaCove NF'; size = 12 }
+                    colorScheme  = 'One Half Dark'
+                    useAtlasEngine = $true
+                }
+            }
+        }
+    }
+    if ($wslProfiles.Count -gt 0) {
+        Write-Host "  ℹ️  Detected $($wslProfiles.Count) WSL distro(s)" -ForegroundColor DarkGray
+    }
+    $allProfiles = @($profiles) + $wslProfiles
+    # Replace the hardcoded profiles array with combined
+    $fragment.profiles = $allProfiles
+
     schemes  = @(
         @{
             name = 'One Half Dark'
