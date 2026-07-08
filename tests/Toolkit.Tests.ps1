@@ -1,0 +1,186 @@
+<#
+.SYNOPSIS
+    Pester testy pro Toolkit modul — rozšířené pokrytí.
+.DESCRIPTION
+    Testuje existenci, chování a chybové stavy všech exportovaných funkcí.
+    Připraveno pro CI (GitHub Actions).
+.NOTES
+    Cesta: ~/Projects/tools/tests/Toolkit.Tests.ps1
+    Spuštění: Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
+#>
+
+Describe 'Toolkit Module' {
+
+    BeforeAll {
+        $modulePath = Join-Path $PSScriptRoot '..\Toolkit\Toolkit.psd1'
+        if (Test-Path $modulePath) {
+            Import-Module $modulePath -Force
+        }
+    }
+
+    # ── Module structure ──────────────────────────────────────
+    Context 'Module structure' {
+        It 'Toolkit.psd1 exists' {
+            Join-Path $PSScriptRoot '..\Toolkit\Toolkit.psd1' | Should -Exist
+        }
+
+        It 'Toolkit.psm1 exists' {
+            Join-Path $PSScriptRoot '..\Toolkit\Toolkit.psm1' | Should -Exist
+        }
+
+        It 'all lib/*.ps1 exist' {
+            $libFiles = @('common.ps1', 'menu.ps1', 'checkers.ps1', 'config.ps1')
+            foreach ($f in $libFiles) {
+                Join-Path $PSScriptRoot "..\lib\$f" | Should -Exist
+            }
+        }
+    }
+
+    # ── All 18 exported functions ─────────────────────────────
+    Context 'Public functions' {
+        $expectedFunctions = @(
+            'Test-Admin', 'Get-ScriptDirectory',
+            'Write-Info', 'Write-Success', 'Write-Warn', 'Write-Err', 'Confirm-Action',
+            'Show-Menu', 'Start-MainMenu', 'Show-DockerMenu', 'Show-GitMenu',
+            'Get-DiskStatus', 'Get-ServiceStatus', 'Get-NetworkInfo', 'Get-TopProcesses',
+            'Invoke-SystemCheck',
+            'Get-ToolkitConfig', 'Save-ToolkitConfig', 'Merge-Hashtable'
+        )
+
+        foreach ($fn in $expectedFunctions) {
+            It "Function '$fn' is exported" {
+                Get-Command -Name $fn -Module Toolkit -ErrorAction Stop | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
+
+    # ── Utility functions ────────────────────────────────────
+    Context 'Utility functions' {
+        It 'Test-Admin returns a boolean' {
+            $result = Test-Admin
+            $result | Should -BeOfType ([bool])
+        }
+
+        It 'Get-ScriptDirectory returns a valid path' {
+            $result = Get-ScriptDirectory
+            $result | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Write-Info does not throw' {
+            { Write-Info 'test message' } | Should -Not -Throw
+        }
+
+        It 'Write-Success does not throw' {
+            { Write-Success 'test message' } | Should -Not -Throw
+        }
+
+        It 'Write-Warn does not throw' {
+            { Write-Warn 'test message' } | Should -Not -Throw
+        }
+
+        It 'Write-Err does not throw' {
+            { Write-Err 'test message' } | Should -Not -Throw
+        }
+
+        It 'Confirm-Action returns false for default (no input)' {
+            Mock Read-Host { return '' } -ModuleName Toolkit
+            $result = Confirm-Action -Prompt 'Test?'
+            $result | Should -Be $false
+        }
+
+        It 'Confirm-Action returns true for "y"' {
+            Mock Read-Host { return 'y' } -ModuleName Toolkit
+            $result = Confirm-Action -Prompt 'Test?'
+            $result | Should -Be $true
+        }
+    }
+
+    # ── Config functions ──────────────────────────────────────
+    Context 'Configuration' {
+        It 'Get-ToolkitConfig returns defaults' {
+            # Force reload by clearing script cache
+            InModuleScope Toolkit {
+                $script:Config = $null
+            }
+            $cfg = Get-ToolkitConfig
+            $cfg.menu.theme | Should -Be 'default'
+            $cfg.system.checkDisks | Should -Be $true
+        }
+
+        It 'Get-ToolkitConfig respects TOOLKIT_* env vars' {
+            $env:TOOLKIT_MENU_THEME = 'test-theme'
+            InModuleScope Toolkit { $script:Config = $null }
+            $cfg = Get-ToolkitConfig
+            $cfg.menu.theme | Should -Be 'test-theme'
+            Remove-Item Env:TOOLKIT_MENU_THEME -ErrorAction SilentlyContinue
+            InModuleScope Toolkit { $script:Config = $null }
+        }
+
+        It 'Merge-Hashtable overrides base with override' {
+            $b = @{ a = 1; b = 2; nested = @{ x = 1 } }
+            $o = @{ b = 42; nested = @{ x = 99; y = 100 } }
+            $r = Merge-Hashtable -Base $b -Override $o
+            $r.a | Should -Be 1
+            $r.b | Should -Be 42
+            $r.nested.x | Should -Be 99
+            $r.nested.y | Should -Be 100
+        }
+    }
+
+    # ── Menu system ───────────────────────────────────────────
+    Context 'Menu functions' {
+        It 'Show-Menu parameter validation — Title is mandatory' {
+            { Show-Menu -Items @{ '1' = { } } } | Should -Throw
+        }
+
+        It 'Show-Menu parameter validation — Items is mandatory' {
+            { Show-Menu -Title 'Test' } | Should -Throw
+        }
+
+        It 'Start-MainMenu is callable without errors (mocked menu)' {
+            Mock Show-Menu { } -ModuleName Toolkit
+            { Start-MainMenu } | Should -Not -Throw
+        }
+
+        It 'Show-DockerMenu handles missing Docker gracefully' {
+            # If Docker not installed, should just warn and return
+            Mock Get-Command { return $null } -ModuleName Toolkit -ParameterFilter { $Name -eq 'docker' }
+            Mock Write-Err { } -ModuleName Toolkit
+            { Show-DockerMenu } | Should -Not -Throw
+        }
+
+        It 'Show-GitMenu handles missing Git gracefully' {
+            Mock Get-Command { return $null } -ModuleName Toolkit -ParameterFilter { $Name -eq 'git' }
+            Mock Write-Err { } -ModuleName Toolkit
+            { Show-GitMenu } | Should -Not -Throw
+        }
+    }
+
+    # ── Checkers ──────────────────────────────────────────────
+    Context 'System check functions' {
+        It 'Invoke-SystemCheck runs without errors' {
+            Mock Get-DiskStatus { 'mock-disks' } -ModuleName Toolkit
+            Mock Get-ServiceStatus { 'mock-services' } -ModuleName Toolkit
+            Mock Get-NetworkInfo { 'mock-network' } -ModuleName Toolkit
+            Mock Get-TopProcesses { 'mock-processes' } -ModuleName Toolkit
+            { Invoke-SystemCheck } | Should -Not -Throw
+        }
+
+        It 'Get-DiskStatus does not throw' {
+            { Get-DiskStatus -ErrorAction SilentlyContinue } | Should -Not -Throw
+        }
+
+        It 'Get-ServiceStatus does not throw' {
+            { Get-ServiceStatus -ErrorAction SilentlyContinue } | Should -Not -Throw
+        }
+
+        It 'Get-TopProcesses does not throw' {
+            { Get-TopProcesses -ErrorAction SilentlyContinue } | Should -Not -Throw
+        }
+    }
+
+    # ── Cleanup ───────────────────────────────────────────────
+    AfterAll {
+        Remove-Module Toolkit -ErrorAction SilentlyContinue
+    }
+}
