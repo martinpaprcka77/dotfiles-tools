@@ -13,6 +13,8 @@ desktop.ini
 
 # IDE
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
 .idea/
 *.sublime-*
 
