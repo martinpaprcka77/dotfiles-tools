@@ -94,6 +94,13 @@ menu/menu-git.ps1 ──→ Import-Module Toolkit ──→ Show-GitMenu
    - `tests/Toolkit.Tests.ps1`: add test case
    - Update `MANUAL.md` and `README.md` function tables
 
+### New in 2026
+- `deps.ps1` — winget-based dependency installer (Git, PS7, WT, VS Code, oh-my-posh, modules)
+- `windows.ps1` — Windows defaults (Explorer, taskbar, privacy, bloatware)
+- `Add-WTProfiles.ps1` — rewritten to generate JSON fragment extensions (WT 1.24+)
+- `.vscode/settings.json` + `.vscode/tasks.json` — committed VS Code config (5 tasks)
+- `lib/config.ps1` — 3-layer config (defaults → JSON → env), `configure.ps1` wizard
+
 ---
 
 ## How to run tests
