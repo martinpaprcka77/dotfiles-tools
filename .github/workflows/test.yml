@@ -12,20 +12,11 @@ on:
 
 jobs:
   test:
-    name: Pester Tests (PowerShell ${{ matrix.ps-version }})
+    name: Pester Tests
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ps-version: ['7.4', '7.6']
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup PowerShell ${{ matrix.ps-version }}
-        uses: actions/setup-powershell@v1
-        with:
-          pwsh-version: ${{ matrix.ps-version }}
 
       - name: Install Pester
         shell: pwsh
