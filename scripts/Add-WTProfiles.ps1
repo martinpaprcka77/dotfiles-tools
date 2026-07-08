@@ -1,26 +1,29 @@
 <#
 .SYNOPSIS
-    Přidá/aktualizuje profily ve Windows Terminálu.
+    Generates a Windows Terminal JSON fragment extension (2026 recommended approach).
 .DESCRIPTION
-    Najde settings.json, zálohuje jej, odstraní komentáře, přidá 4 profily
-    s pevnými GUID a uloží bez BOM. Podporuje -WhatIf.
+    Creates a fragment at %LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\dotfiles\
+    instead of editing settings.json directly. This is Microsoft's recommended method
+    since WT 1.24+. Safe, no comment-stripping needed, supports updates.
 .PARAMETER WhatIf
     Pouze zobrazí, co by se provedlo, beze změn.
+.PARAMETER Force
+    Přepíše existující fragment.
 .EXAMPLE
     .\Add-WTProfiles.ps1
     .\Add-WTProfiles.ps1 -WhatIf
+    .\Add-WTProfiles.ps1 -Force
 .NOTES
-    GUID profilů:
-    Menu:      {11111111-1111-1111-1111-111111111111}
-    Projekty:  {22222222-2222-2222-2222-222222222222}
-    PS7:       {33333333-3333-3333-3333-333333333333}
-    PS5:       {44444444-4444-4444-4444-444444444444}
+    Fragment location: %LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json
+    Uses "updates" key to modify built-in PowerShell profiles.
     Cesta: ~/Projects/tools/scripts/Add-WTProfiles.ps1
 #>
 [CmdletBinding(SupportsShouldProcess)]
-param()
+param(
+    [switch]$Force
+)
 
-# Cross-platform guard — Windows Terminal only exists on Windows
+# Cross-platform guard
 if ($IsLinux -or $IsMacOS) {
     Write-Error "Add-WTProfiles.ps1 requires Windows. This is a Linux/macOS system."
     exit 1
@@ -28,162 +31,105 @@ if ($IsLinux -or $IsMacOS) {
 
 $ErrorActionPreference = 'Stop'
 
-#region Find settings.json
-$possiblePaths = @(
-    "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json",
-    "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
-)
-
-$settingsPath = $null
-foreach ($p in $possiblePaths) {
-    if (Test-Path $p) {
-        $settingsPath = $p
-        break
-    }
-}
-
-if (-not $settingsPath) {
-    Write-Error "Nenalezen settings.json Windows Terminálu."
-    exit 1
-}
-
-Write-Info "Nalezen: $settingsPath"
-#endregion
-
-#region Backup
-$backupPath = "$settingsPath.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-if ($PSCmdlet.ShouldProcess($settingsPath, "Zálohovat do $backupPath")) {
-    Copy-Item $settingsPath $backupPath
-    Write-Success "Záloha uložena: $backupPath"
-}
-#endregion
-
-#region Remove comments and parse JSON
-$raw = Get-Content $settingsPath -Raw
-
-# Remove // comments (line-based)
-$lines = $raw -split "`r?`n"
-$cleanLines = $lines | ForEach-Object {
-    if ($_ -match '^\s*//') { return $null }
-    $_ -replace '\s*//.*$', ''
-}
-$cleanJson = ($cleanLines | Where-Object { $_ -ne $null -and $_.Trim() -ne '' }) -join "`n"
-
-try {
-    $settings = $cleanJson | ConvertFrom-Json -Depth 20 -ErrorAction Stop
-}
-catch {
-    Write-Error "Nepodařilo se parsovat JSON: $_"
-    Write-Info "Zkontroluj $backupPath"
-    exit 1
-}
-#endregion
-
-#region Define profiles
+$fragmentDir = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles"
+$fragmentPath = Join-Path $fragmentDir 'dotfiles.json'
 $toolsRoot = Join-Path $HOME 'Projects\tools'
 $iconsDir = Join-Path $toolsRoot 'icons'
 
-$newProfiles = @(
-    [PSCustomObject]@{
-        guid    = '{11111111-1111-1111-1111-111111111111}'
-        name    = 'Menu'
-        command = 'pwsh.exe'
-        args    = '-NoExit', '-Command', "& '$toolsRoot\menu\menu-main.ps1'"
-        icon    = Join-Path $iconsDir 'menu.png'
-    },
-    [PSCustomObject]@{
-        guid    = '{22222222-2222-2222-2222-222222222222}'
-        name    = 'Projekty'
-        command = 'pwsh.exe'
-        args    = '-NoExit', '-Command', "Set-Location '$HOME\Projects\work'"
-        icon    = Join-Path $iconsDir 'projects.png'
-    },
-    [PSCustomObject]@{
-        guid    = '{33333333-3333-3333-3333-333333333333}'
-        name    = 'PowerShell 7'
-        command = 'pwsh.exe'
-        args    = '-NoExit'
-        icon    = Join-Path $iconsDir 'pwsh7.png'
-    },
-    [PSCustomObject]@{
-        guid    = '{44444444-4444-4444-4444-444444444444}'
-        name    = 'Windows PowerShell 5.1'
-        command = 'powershell.exe'
-        args    = '-NoExit'
-        icon    = Join-Path $iconsDir 'pwsh5.png'
-    }
-)
-#endregion
+function Write-Step { param([string]$M) Write-Host "==> $M" -ForegroundColor Cyan }
+function Write-Ok   { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green }
+function Write-Skip { param([string]$M) Write-Host "  [=] $M" -ForegroundColor Gray }
 
-#region Update profiles list
-if (-not $settings.profiles) {
-    $settings | Add-Member -MemberType NoteProperty -Name 'profiles' -Value ([PSCustomObject]@{}) -Force
-}
-if (-not $settings.profiles.list) {
-    $settings.profiles | Add-Member -MemberType NoteProperty -Name 'list' -Value @() -Force
+# ── Check if already installed ─────────────────────────────────
+if (Test-Path $fragmentPath -and -not $Force) {
+    Write-Skip "Fragment already exists at: $fragmentPath"
+    Write-Skip "Use -Force to overwrite."
+    exit 0
 }
 
-$profileList = [System.Collections.ArrayList]($settings.profiles.list)
+# ── Determine icon paths (relative to fragment for WT 1.24+) ──
+# WT 1.24+ resolves icons relative to fragment directory. For absolute paths,
+# we still use full paths since we're generating from tools/scripts.
+$icons = @{
+    menu     = if (Test-Path (Join-Path $iconsDir 'menu.png'))     { Join-Path $iconsDir 'menu.png' }     else { $null }
+    projects = if (Test-Path (Join-Path $iconsDir 'projects.png')) { Join-Path $iconsDir 'projects.png' } else { $null }
+    pwsh7    = if (Test-Path (Join-Path $iconsDir 'pwsh7.png'))    { Join-Path $iconsDir 'pwsh7.png' }    else { $null }
+    pwsh5    = if (Test-Path (Join-Path $iconsDir 'pwsh5.png'))    { Join-Path $iconsDir 'pwsh5.png' }    else { $null }
+}
 
-foreach ($new in $newProfiles) {
-    $existing = $profileList | Where-Object { $_.guid -eq $new.guid }
-
-    # Check icons
-    $iconPath = if (Test-Path $new.icon) { $new.icon } else { $null }
-
-    $profileObj = [PSCustomObject]@{
-        guid    = $new.guid
-        name    = $new.name
-        commandline = $new.command
-        commandlineArgs = $new.args -join ' '
-        icon    = $iconPath
-        hidden  = $false
-    }
-
-    if ($existing) {
-        $index = $profileList.IndexOf($existing)
-        if ($PSCmdlet.ShouldProcess($new.name, "Aktualizovat profil")) {
-            $profileList[$index] = $profileObj
-            Write-Success "Aktualizován profil: $($new.name)"
+# ── Build fragment JSON ────────────────────────────────────────
+$fragment = @{
+    '$schema' = 'https://aka.ms/terminal-profiles-schema'
+    profiles  = @(
+        # ── Custom profile: Menu ──
+        @{
+            name         = 'Menu'
+            commandline  = "pwsh.exe -NoExit -Command `"& '$toolsRoot\menu\menu-main.ps1'`""
+            startingDirectory = $toolsRoot
+            icon         = $icons.menu
+            tabTitle     = 'Menu'
+            suppressApplicationTitle = $true
         }
-    }
-    else {
-        if ($PSCmdlet.ShouldProcess($new.name, "Přidat profil")) {
-            $profileList.Add($profileObj) | Out-Null
-            Write-Success "Přidán profil: $($new.name)"
+        # ── Custom profile: Projekty ──
+        @{
+            name         = 'Projekty'
+            commandline  = 'pwsh.exe -NoExit'
+            startingDirectory = Join-Path $HOME 'Projects\work'
+            icon         = $icons.projects
+            tabTitle     = 'Projekty'
+            suppressApplicationTitle = $true
         }
-    }
+        # ── Built-in profile updates (via "updates") ──
+        # Updates PowerShell 7 built-in profile
+        @{
+            name         = 'PowerShell 7'
+            commandline  = 'pwsh.exe -NoExit'
+            startingDirectory = $HOME
+            icon         = $icons.pwsh7
+            tabTitle     = 'PS 7'
+            font         = @{ face = 'Cascadia Code'; size = 12 }
+            useAtlasEngine = $true
+            antialiasingMode = 'cleartype'
+        }
+        # Updates Windows PowerShell 5.1 built-in profile
+        @{
+            name         = 'Windows PowerShell 5.1'
+            commandline  = 'powershell.exe -NoExit'
+            startingDirectory = $HOME
+            icon         = $icons.pwsh5
+            tabTitle     = 'PS 5'
+        }
+    )
 }
 
-$settings.profiles.list = $profileList.ToArray()
-#endregion
+# ── Save fragment ──────────────────────────────────────────────
+if ($PSCmdlet.ShouldProcess($fragmentPath, 'Create JSON fragment')) {
+    # Create directory
+    if (-not (Test-Path $fragmentDir)) {
+        New-Item -ItemType Directory -Path $fragmentDir -Force | Out-Null
+        Write-Ok "Created fragment directory: $fragmentDir"
+    }
 
-#region Save settings (without BOM)
-if ($PSCmdlet.ShouldProcess($settingsPath, "Uložit nastavení")) {
-    $json = $settings | ConvertTo-Json -Depth 20
+    # Back up existing fragment
+    if (Test-Path $fragmentPath) {
+        $backup = "$fragmentPath.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Copy-Item $fragmentPath $backup
+        Write-Ok "Backup: $backup"
+    }
+
+    # Write without BOM (UTF-8)
+    $json = $fragment | ConvertTo-Json -Depth 5
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::WriteAllText($settingsPath, $json, $utf8NoBom)
-    Write-Success "Nastavení uloženo."
-}
-#endregion
+    [System.IO.File]::WriteAllText($fragmentPath, $json, $utf8NoBom)
+    Write-Ok "Fragment created: $fragmentPath"
 
-#region Generate profiles-fragment.json
-$fragmentPath = Join-Path $PSScriptRoot 'profiles-fragment.json'
-$fragment = [PSCustomObject]@{
-    profiles = [PSCustomObject]@{
-        list = @($newProfiles | ForEach-Object {
-            [PSCustomObject]@{
-                guid    = $_.guid
-                name    = $_.name
-                commandline = $_.command
-                icon    = if (Test-Path $_.icon) { $_.icon } else { $null }
-            }
-        })
-    }
+    # Also save copy to scripts/ for reference
+    $refPath = Join-Path $PSScriptRoot 'profiles-fragment.json'
+    [System.IO.File]::WriteAllText($refPath, $json, $utf8NoBom)
+    Write-Ok "Reference copy: $refPath"
 }
-$fragmentJson = $fragment | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText($fragmentPath, $fragmentJson, (New-Object System.Text.UTF8Encoding $false))
-Write-Info "Fragment vygenerován: $fragmentPath"
-#endregion
 
-Write-Host "`nHotovo! Restartuj Windows Terminal." -ForegroundColor Green
+# ── Result ─────────────────────────────────────────────────────
+Write-Host "`nDone! Restart Windows Terminal to see the new profiles." -ForegroundColor Green
+Write-Host "Fragment location: $fragmentPath" -ForegroundColor Gray
+Write-Host "To remove: delete the fragment file and restart WT." -ForegroundColor Gray
