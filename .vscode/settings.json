@@ -1,0 +1,15 @@
+{
+    "powershell.powerShellDefaultVersion": "PowerShell 7",
+    "powershell.codeFormatting.useCorrectCasing": true,
+    "powershell.integratedConsole.showOnStartup": false,
+    "powershell.startAutomatically": true,
+    "[powershell]": {
+        "files.encoding": "utf8bom",
+        "files.trimTrailingWhitespace": true,
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.fontFamily": "Cascadia Code NF, Cascadia Code, Consolas",
+    "terminal.integrated.fontSize": 13
+}
