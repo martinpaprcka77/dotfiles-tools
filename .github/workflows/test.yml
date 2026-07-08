@@ -44,6 +44,12 @@ jobs:
       - name: Validate JSON (profiles-fragment.json)
         shell: pwsh
         run: |
+          # profiles-fragment.json is generated at runtime by Add-WTProfiles.ps1,
+          # so it isn't committed — only validate it when it's actually present.
+          if (-not (Test-Path scripts/profiles-fragment.json)) {
+            Write-Host "⏭️  profiles-fragment.json not present (generated artifact) — skipping"
+            return
+          }
           try {
             Get-Content scripts/profiles-fragment.json -Raw | ConvertFrom-Json | Out-Null
             Write-Host "✅ profiles-fragment.json — valid JSON"
