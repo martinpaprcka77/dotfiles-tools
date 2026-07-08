@@ -15,6 +15,7 @@ desktop.ini
 .vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
+!.vscode/agent-instructions.md
 .idea/
 *.sublime-*
 
