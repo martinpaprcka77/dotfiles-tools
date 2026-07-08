@@ -24,6 +24,12 @@ param(
     [switch]$RemoveBloatware
 )
 
+# Cross-platform guard — registry and AppX are Windows-only
+if ($IsLinux -or $IsMacOS) {
+    Write-Error "windows.ps1 requires Windows (registry + AppX). This is a Linux/macOS system."
+    exit 1
+}
+
 function Write-Step { param([string]$M) Write-Host "==> $M" -ForegroundColor Cyan }
 function Write-Ok   { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green }
 function Write-Skip { param([string]$M) Write-Host "  [=] $M" -ForegroundColor Gray }
@@ -64,6 +70,7 @@ foreach ($setting in $explorerSettings) {
 Write-Step "Configuring Taskbar..."
 $taskbarSettings = @(
     # Taskbar alignment: left (0 = left, 1 = center)
+    # ⚠️ Undocumented registry keys — may change in future Windows builds
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'; Name = 'TaskbarAl'; Value = 0; Type = 'DWord' }
     # Hide search box (0 = hidden, 1 = icon, 2 = box)
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Search'; Name = 'SearchboxTaskbarMode'; Value = 0; Type = 'DWord' }
@@ -148,7 +155,7 @@ if ($RemoveBloatware) {
 # ── Done ───────────────────────────────────────────────────────
 Write-Host "`nWindows defaults configured!" -ForegroundColor Green
 Write-Host "Some changes require Explorer restart or logoff to take effect." -ForegroundColor Yellow
-$restart = Read-Host "Restart Explorer now? (y/N)"
+$restart = Read-Host "Restart Explorer now? ⚠️ This closes ALL Explorer windows. (y/N)"
 if ($restart -eq 'y') {
     Stop-Process -Name explorer -Force
     Write-Host "Explorer restarted." -ForegroundColor Green

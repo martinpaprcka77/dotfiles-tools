@@ -22,6 +22,12 @@ param(
     [switch]$Minimal
 )
 
+# Cross-platform guard — winget is Windows-only
+if ($IsLinux -or $IsMacOS) {
+    Write-Error "deps.ps1 requires Windows (winget). This is a Linux/macOS system."
+    exit 1
+}
+
 $ErrorActionPreference = 'Continue'
 $script:installed = 0; $script:skipped = 0; $script:failed = 0
 
@@ -39,9 +45,9 @@ function Install-Pkg {
         return
     }
     if ($PSCmdlet.ShouldProcess($Id, "winget install")) {
-        $args = @('install', '--id', $Id, '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements')
-        if ($ExtraArgs) { $args += $ExtraArgs.Split(' ') }
-        winget @args 2>&1 | Out-Null
+        $wingetArgs = @('install', '--id', $Id, '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements')
+        if ($ExtraArgs) { $wingetArgs += $ExtraArgs.Split(' ') }
+        winget @wingetArgs 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) { Write-Ok "Installed: $Name" }
         else { Write-Fail "Failed: $Name — try manually: winget install --id $Id" }
     }
@@ -88,20 +94,29 @@ $modules = @(
     @{ Name = 'Pester';            MinVersion = '5.7.0' }
 )
 
-pwsh -NoProfile -Command {
-    param($mods)
-    foreach ($m in $mods) {
-        $existing = Get-Module -ListAvailable -Name $m.Name | Sort-Object Version -Descending | Select-Object -First 1
-        if ($existing -and $existing.Version -ge [version]$m.MinVersion) {
-            Write-Host "  [=] Already installed: $($m.Name) v$($existing.Version)" -ForegroundColor Gray
-        } else {
-            Write-Host "  ==> Installing: $($m.Name)..." -ForegroundColor Cyan
-            Install-PSResource -Name $m.Name -TrustRepository -ErrorAction SilentlyContinue
-            if ($?) { Write-Host "  [+] Installed: $($m.Name)" -ForegroundColor Green }
-            else { Write-Host "  [x] Failed: $($m.Name)" -ForegroundColor Red }
+foreach ($m in $modules) {
+    $existing = Get-Module -ListAvailable -Name $m.Name -ErrorAction SilentlyContinue |
+        Sort-Object Version -Descending | Select-Object -First 1
+    if ($existing -and $existing.Version -ge [version]$m.MinVersion) {
+        Write-Skip "Already installed: $($m.Name) v$($existing.Version)"
+    } else {
+        Write-Step "Installing: $($m.Name)..."
+        if ($PSCmdlet.ShouldProcess($m.Name, 'Install module')) {
+            try {
+                if (Get-Command Install-PSResource -ErrorAction SilentlyContinue) {
+                    Install-PSResource -Name $m.Name -TrustRepository -ErrorAction Stop
+                } elseif (Get-Command Install-Module -ErrorAction SilentlyContinue) {
+                    Install-Module -Name $m.Name -Force -Scope CurrentUser -ErrorAction Stop
+                } else {
+                    throw 'No package manager available. Install PowerShellGet or PSResourceGet.'
+                }
+                Write-Ok "Installed: $($m.Name)"
+            } catch {
+                Write-Fail "Failed: $($m.Name) — $_"
+            }
         }
     }
-} -args $modules
+}
 
 # ── Summary ────────────────────────────────────────────────────
 Write-Host "`n=== DEPENDENCIES SUMMARY ===" -ForegroundColor Magenta
