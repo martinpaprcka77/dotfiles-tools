@@ -42,15 +42,14 @@ Describe 'Toolkit Module' {
             'Test-Admin', 'Get-ScriptDirectory',
             'Write-Info', 'Write-Success', 'Write-Warn', 'Write-Err', 'Confirm-Action',
             'Show-Menu', 'Start-MainMenu', 'Show-DockerMenu', 'Show-GitMenu',
+            'Show-TerminalMenu', 'Show-DotfilesMenu', 'Show-PwshMenu', 'Show-VSCodeMenu',
             'Get-DiskStatus', 'Get-ServiceStatus', 'Get-NetworkInfo', 'Get-TopProcesses',
             'Invoke-SystemCheck',
             'Get-ToolkitConfig', 'Save-ToolkitConfig', 'Merge-Hashtable'
         )
 
-        foreach ($fn in $expectedFunctions) {
-            It "Function '$fn' is exported" {
-                Get-Command -Name $fn -Module Toolkit -ErrorAction Stop | Should -Not -BeNullOrEmpty
-            }
+        It "Function '<_>' is exported" -ForEach $expectedFunctions {
+            Get-Command -Name $_ -Module Toolkit -ErrorAction Stop | Should -Not -BeNullOrEmpty
         }
     }
 

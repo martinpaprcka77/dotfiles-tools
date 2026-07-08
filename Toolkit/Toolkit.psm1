@@ -15,6 +15,14 @@ if (Test-Path $libDir) {
     }
 }
 
+# Dot-source all menu scripts (define Show-*Menu functions)
+$menuDir = Join-Path $PSScriptRoot '..\menu'
+if (Test-Path $menuDir) {
+    Get-ChildItem -Path $menuDir -Filter 'menu-*.ps1' | ForEach-Object {
+        . $_.FullName
+    }
+}
+
 # Export public functions
 Export-ModuleMember -Function @(
     # Common

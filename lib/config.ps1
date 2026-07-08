@@ -53,8 +53,8 @@ function Get-ToolkitConfig {
     }
 
     # ── Environment overrides (TOOLKIT_*) ─────────────────────
-    foreach ($key in $defaults.Keys) {
-        foreach ($sub in $defaults[$key].Keys) {
+    foreach ($key in @($defaults.Keys)) {
+        foreach ($sub in @($defaults[$key].Keys)) {
             $envVar = "TOOLKIT_$($key)_$($sub)".ToUpper()
             $envVal = Get-Item -Path "Env:$envVar" -ErrorAction SilentlyContinue
             if ($envVal) {
