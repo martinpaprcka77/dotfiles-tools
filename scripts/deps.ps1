@@ -71,7 +71,8 @@ Install-Pkg -Id 'Microsoft.VisualStudioCode' -Name 'VS Code'
 
 # ── Shell enhancement ──────────────────────────────────────────
 Write-Host "`n--- SHELL ENHANCEMENT ---" -ForegroundColor Magenta
-Install-Pkg -Id 'JanDeDobbeleer.OhMyPosh' -Name 'oh-my-posh'
+Install-Pkg -Id 'Starship.Starship' -Name 'Starship prompt (Rust, cross-shell)'
+# oh-my-posh alternative (fallback): Install-Pkg -Id 'JanDeDobbeleer.OhMyPosh' -Name 'oh-my-posh'
 
 # ── Fonts ──────────────────────────────────────────────────────
 Write-Host "`n--- FONTS ---" -ForegroundColor Magenta
