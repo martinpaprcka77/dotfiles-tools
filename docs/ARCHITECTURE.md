@@ -141,7 +141,7 @@ bin/menu.ps1                  bin/check.ps1
     ▼                           ▼
 ┌─────────────────────────────────────────┐
 │           Toolkit.psd1 (manifest)       │
-│  FunctionsToExport: 15 functions         │
+│  FunctionsToExport: 30 functions         │
 └─────────────────────────────────────────┘
     │
     │ RootModule
