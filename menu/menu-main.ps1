@@ -12,7 +12,7 @@ function Start-MainMenu {
         '1. 🐳 Docker'     = { Show-DockerMenu }
         '2. 🔍 Diagnostika' = { Invoke-SystemCheck }
         '3. 📋 Git'         = { Show-GitMenu }
-        '4. 🔧 Nástroje'    = { Write-Info "Nástroje — zatím prázdné."; Read-Host "`nStiskni Enter..." }
+        '4. 🖥️  Terminal'     = { Show-TerminalMenu }
         '5. 🚪 Exit'        = { return }
     }
 

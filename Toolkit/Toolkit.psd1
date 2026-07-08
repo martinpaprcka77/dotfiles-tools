@@ -21,6 +21,7 @@
         'Start-MainMenu',
         'Show-DockerMenu',
         'Show-GitMenu',
+        'Show-TerminalMenu',
         'Get-DiskStatus',
         'Get-ServiceStatus',
         'Get-NetworkInfo',

@@ -31,6 +31,7 @@ Export-ModuleMember -Function @(
     'Start-MainMenu',
     'Show-DockerMenu',
     'Show-GitMenu',
+    'Show-TerminalMenu',
 
     # Checkers
     'Get-DiskStatus',
