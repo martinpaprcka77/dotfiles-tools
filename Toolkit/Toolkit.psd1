@@ -32,7 +32,14 @@
         'Invoke-SystemCheck',
         'Get-ToolkitConfig',
         'Save-ToolkitConfig',
-        'Merge-Hashtable'
+        'Merge-Hashtable',
+        'Get-PSModulePath',
+        'Add-PSModulePath',
+        'Remove-PSModulePath',
+        'Reset-PSModulePath',
+        'Export-PSModulePath',
+        'Import-PSModulePath',
+        'Test-PSModulePath'
     )
 
     CmdletsToExport   = @()

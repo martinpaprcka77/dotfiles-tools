@@ -54,5 +54,14 @@ Export-ModuleMember -Function @(
     # Config
     'Get-ToolkitConfig',
     'Save-ToolkitConfig',
-    'Merge-Hashtable'
+    'Merge-Hashtable',
+
+    # ModulePath
+    'Get-PSModulePath',
+    'Add-PSModulePath',
+    'Remove-PSModulePath',
+    'Reset-PSModulePath',
+    'Export-PSModulePath',
+    'Import-PSModulePath',
+    'Test-PSModulePath'
 )

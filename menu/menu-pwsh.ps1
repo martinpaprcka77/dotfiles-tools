@@ -58,7 +58,20 @@ function Show-PwshMenu {
             Get-Module | Where-Object { $_.Name -notmatch '^Microsoft\.|^Cim|^PSReadLine$' } | Select Name, Version | Sort Name | ForEach-Object { Write-Host "    $($_.Name) v$($_.Version)" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'All loaded PowerShell modules' }
-        '8. ↩️  Back'           = @{ Action = { return }; Desc = 'Return to main menu' }
+        '8. 📂 ModulePath'      = @{ Action = {
+            $sub = [ordered]@{
+                '1. List Paths'       = @{ Action = { Get-PSModulePath | Out-Null }; Desc = 'Show all entries with validation' }
+                '2. Validate'         = @{ Action = { Test-PSModulePath }; Desc = 'Check duplicates, OneDrive, priority' }
+                '3. Reset Baseline'   = @{ Action = { Reset-PSModulePath }; Desc = 'Modern: PS7 first, no OneDrive' }
+                '4. Add Path'         = @{ Action = { $p = Read-Host 'Path'; Add-PSModulePath -Path $p }; Desc = 'Add a directory (no duplicates)' }
+                '5. Remove Path'      = @{ Action = { Get-PSModulePath | Out-Null; $i = Read-Host 'Index to remove'; if ($i -match '^\d+$') { Remove-PSModulePath -Index ([int]$i) } }; Desc = 'Remove by index number' }
+                '6. Export Config'    = @{ Action = { Export-PSModulePath }; Desc = 'Save to psmodulepath.json' }
+                '7. Import Config'    = @{ Action = { Import-PSModulePath }; Desc = 'Restore from psmodulepath.json' }
+                '8. ↩️  Back'          = @{ Action = { return } }
+            }
+            Show-Menu -Title 'MODULE PATH' -Items $sub
+        }; Desc = 'List, add, remove, reset, export/import PSModulePath' }
+        '9. ↩️  Back'           = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'POWERSHELL' -Items $items
 }
