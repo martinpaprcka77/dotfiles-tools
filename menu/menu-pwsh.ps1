@@ -47,7 +47,9 @@ function Show-PwshMenu {
                 '2. Module Analysis' = @{ Action = { Optimize-ModuleLoading }; Desc = 'Lazy loading suggestions' }
                 '3. Profile Size'    = @{ Action = { Get-ProfileSize }; Desc = 'Lines, bytes, file count' }
                 '4. Clear Cache'     = @{ Action = { Clear-PSCache }; Desc = 'Clean corrupted module caches' }
-                '5. ↩️  Back'         = @{ Action = { return } }
+                '5. ETW Profiling'   = @{ Action = { Write-Info "Starting ETW trace... run commands, then Stop-PSProfiling"; Start-PSProfiling }; Desc = 'Start ETW trace for deep diagnostics' }
+                '6. Event Logs'      = @{ Action = { Get-PSEventLog }; Desc = 'PowerShell event log sizes and properties' }
+                '7. ↩️  Back'         = @{ Action = { return } }
             }
             Show-Menu -Title 'PERFORMANCE' -Items $sub
         }; Desc = 'Benchmark, analyze, optimize, clear caches' }
