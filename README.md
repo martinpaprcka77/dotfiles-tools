@@ -1,11 +1,11 @@
 # dotfiles-tools
 
-> **PowerShell toolbox** — interactive menus, system diagnostics, Docker & Git helpers, Toolkit module with 30 functions.
+> **PowerShell toolbox** — interactive menus with live status detection, system diagnostics, Docker & Git helpers, Toolkit module with 36 functions.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--tools-blue)](#)
-[![files](https://img.shields.io/badge/files-44-green)](#)
+[![files](https://img.shields.io/badge/files-45-green)](#)
 [![module](https://img.shields.io/badge/module-Toolkit-orange)](#)
-[![tests](https://img.shields.io/badge/tests-34_cases-brightgreen)](#)
+[![tests](https://img.shields.io/badge/tests-63_cases-brightgreen)](#)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
 ---
@@ -18,7 +18,7 @@
 | Profile orchestration | Menu & diagnostics |
 | Bootstrap & install | Toolkit PowerShell module |
 | Version/host profiles | Windows Terminal integration |
-| Secret management helpers | Pester tests (34 cases) |
+| Secret management helpers | Pester tests (63 cases) |
 | 👉 **[github.com/martinpaprcka77/dotfiles-powershell](https://github.com/martinpaprcka77/dotfiles-powershell)** | 👉 **[github.com/martinpaprcka77/dotfiles-tools](https://github.com/martinpaprcka77/dotfiles-tools)** |
 | **🌐 Portal: [martinpaprcka77.github.io](https://martinpaprcka77.github.io)** | |
 
@@ -29,11 +29,11 @@
 | What | Details |
 |------|---------|
 | **Location** | `~/Projects/tools/` |
-| **30 functions** | Toolkit module — menu engine, diagnostics, utilities, logging, config, modulepath |
+| **36 functions** | Toolkit module — menu engine, live-status detectors, diagnostics, utilities, logging, config, modulepath |
 | **5 bin scripts** | `menu.ps1`, `check.ps1`, `configure.ps1`, `setup-repos.ps1` + scripts |
-| **7 menus** | Main, Docker, Git, Terminal, Dotfiles, Pwsh, VSCode (numbered, extensible) |
-| **4 helper scripts** | Add-WTProfiles, Generate-Icons, configure, setup-repos |
-| **34 Pester tests** | Module structure, function exports, Mock coverage, config, error paths |
+| **7 menus** | Main, Docker, Git, Terminal, Dotfiles, Pwsh, VSCode (numbered, extensible, live per-item status) |
+| **8 helper scripts** | Add-WTProfiles, Generate-Icons, configure, setup-repos, deps, windows, modernize, precheck |
+| **63 Pester tests** | Module structure, function exports, Mock coverage, config, error paths, PSModulePath |
 
 ---
 
@@ -123,7 +123,7 @@ Invoke-SystemCheck
 
 ---
 
-## 📦 Toolkit Module — 30 Functions
+## 📦 Toolkit Module — 36 Functions
 
 | Category | Function | Purpose |
 |----------|----------|---------|
@@ -155,6 +155,12 @@ Invoke-SystemCheck
 | | `Export-PSModulePath` | Save current paths to JSON |
 | | `Import-PSModulePath` | Restore paths from JSON |
 | | `Test-PSModulePath` | Validate (duplicates, missing dirs, OneDrive, priority) |
+| **Detectors** | `Get-ModuleStackStatus` | Show-Menu live status: legacy vs. modern module stack |
+| | `Test-LegacyPowerShellGetPresent` | Predicate shared with `modernize.ps1` — same source of truth |
+| | `Test-PSResourceGetReady` | Predicate shared with `modernize.ps1` — same source of truth |
+| | `Get-DotfilesCompanionStatus` | Show-Menu live status: is the companion profile loaded? |
+| | `Get-ModulePathStatus` | Show-Menu live status: PSModulePath health |
+| | `Invoke-IfAvailable` | Guard: runs an action only if its command is loaded |
 
 ---
 
@@ -167,11 +173,13 @@ Invoke-SystemCheck
 │   └── check.ps1             ← system diagnostics
 ├── lib/
 │   ├── common.ps1            ← utility & logging functions
-│   ├── menu.ps1              ← Show-Menu engine
+│   ├── menu.ps1              ← Show-Menu engine (arrow-key nav + live status column)
 │   ├── checkers.ps1          ← disk, services, network, processes
-│   └── config.ps1            ← 3-layer config (defaults → JSON → env)
+│   ├── config.ps1            ← 3-layer config (defaults → JSON → env)
+│   ├── modulepath.ps1        ← PSModulePath manager (get/add/remove/reset/export/import/test)
+│   └── detectors.ps1         ← Show-Menu live-status detectors (module stack, companion-repo, PSModulePath)
 ├── Toolkit/
-│   ├── Toolkit.psd1          ← module manifest (30 exports)
+│   ├── Toolkit.psd1          ← module manifest (36 exports)
 │   └── Toolkit.psm1          ← module body
 ├── menu/
 │   ├── menu-main.ps1         ← Start-MainMenu
@@ -189,8 +197,10 @@ Invoke-SystemCheck
 │   ├── deps.ps1              ← winget dependency installer
 │   ├── windows.ps1           ← Windows defaults (Explorer, privacy)
 │   └── precheck.ps1          ← 30+ inventory checks
-├── configs/settings.json     ← default config
-├── tests/Toolkit.Tests.ps1   ← 34 Pester test cases
+├── configs/
+│   ├── settings.json         ← default config
+│   └── wt-schemes.json       ← WT color schemes (single source of truth, read by Add-WTProfiles.ps1)
+├── tests/Toolkit.Tests.ps1   ← 63 Pester test cases
 ├── docs/                     ← ARCHITECTURE, MANUAL, ROADMAP, PROMPT
 └── .gitignore
 ```
@@ -215,7 +225,7 @@ Install-Module Pester -Force
 Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
 ```
 
-**34 test cases** across 7 contexts: module structure, 30 function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks, PSModulePath management.
+**63 test cases**: module structure, function exports, utility behavior with Mocks, config env-var overrides, menu error paths, system check mocks, PSModulePath management. 10 fail on Linux specifically — traced to two known, non-blocking causes (missing platform guards on genuinely Windows-only checkers, and `[IO.Path]::PathSeparator` colliding with Windows drive-letter colons in test fixtures) — not real bugs in the functions under test.
 
 ---
 

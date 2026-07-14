@@ -51,53 +51,56 @@ graph TB
 
 ## Datový tok: Add-WTProfiles.ps1
 
+Reálná implementace **negeneruje settings.json editaci ani neodstraňuje `//` komentáře** — to
+byl starší návrh. Od WT 1.24+ se používá **JSON fragment extension**
+(`%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json`), kterou WT čte
+automaticky bez zásahu do uživatelova `settings.json`. Profily se párují podle `name`, ne GUID —
+žádné GUID se nikde negenerují ani nepoužívají.
+
 ```mermaid
 sequenceDiagram
     actor U as Uživatel
     participant WT as Add-WTProfiles.ps1
     participant FS as Souborový systém
-    participant JSON as JSON parser
 
-    U->>WT: .\Add-WTProfiles.ps1 [-WhatIf]
-    WT->>FS: Najít settings.json
-    alt nenalezen
-        WT-->>U: Error: nenalezen
-    else nalezen
-        WT->>FS: Zálohovat do .backup.*.json
-        WT->>FS: Přečíst raw obsah
-        WT->>WT: Odstranit // komentáře
-        WT->>JSON: Parsovat čisté JSON
-
-        loop 4 profily (Menu, Projekty, PS7, PS5)
-            WT->>FS: Test-Path ikona?
-            alt ikona existuje
-                WT->>WT: Nastavit icon cestu
-            else neexistuje
-                WT->>WT: icon = null
-            end
-            WT->>JSON: Přidat/aktualizovat profil
-        end
-
-        WT->>FS: Uložit bez BOM (UTF8Encoding)
-        WT->>FS: Vygenerovat profiles-fragment.json
-        WT-->>U: Hotovo!
+    U->>WT: .\Add-WTProfiles.ps1 [-WhatIf] [-Force]
+    WT->>FS: Existuje fragment a není -Force?
+    alt existuje, bez -Force
+        WT-->>U: Skip — použij -Force
+    else pokračuje
+        WT->>WT: Detekce WSL distribucí (wsl -l -q)
+        WT->>WT: Sestavit profily: Menu, Projekty (shell integration),<br/>PowerShell 7, WinPS 5.1 (bez shell-integration overrides —<br/>tyto dva jen aktualizují existující vestavěné profily jménem)
+        WT->>FS: Načíst configs/wt-schemes.json (single source of truth)
+        WT->>FS: Zálohovat existující fragment (.backup.<timestamp>)
+        WT->>FS: Zapsat fragment bez BOM (UTF8Encoding)
+        WT-->>U: Hotovo — restart WT pro projevení
     end
 ```
 
 ## Menu engine (Show-Menu)
 
+Skutečná implementace používá **arrow-key navigaci přes `[Console]::ReadKey`**, ne číslované
+`Read-Host` vstupy (číselné zkratky fungují taky, jako doplněk). Každá položka může nést
+volitelný `Detector` scriptblock, který se vyhodnotí znovu při každém překreslení a zobrazí
+živý stavový sloupec (✅/⚠️/❌ + text) vedle popisu.
+
 ```mermaid
 flowchart TD
-    START["Show-Menu -Title 'X' -Items @{...}"] --> CLEAR["Clear-Host"]
-    CLEAR --> DRAW["Vykreslit nadpis a položky"]
-    DRAW --> INPUT["Read-Host 'Volba'"]
-    INPUT --> VALID{"Klíč existuje?"}
-    VALID -->|ano| EXEC["Spustit scriptblock"]
-    VALID -->|ne| CHECK{"'0' nebo 'q'?"}
-    CHECK -->|ano| END["Konec"]
-    CHECK -->|ne| WARN["Write-Warn<br/>Sleep 800ms"]
-    EXEC --> CLEAR
-    WARN --> CLEAR
+    START["Show-Menu -Title 'X' -Items @{...}"] --> NORM["Normalizovat položky<br/>(Action, Desc, Detector)"]
+    NORM --> LOOP["Render loop"]
+    LOOP --> DET["Vyhodnotit Detector<br/>pro každou položku (try/catch)"]
+    DET --> DRAW["Vykreslit box: nadpis, položky<br/>+ Desc + živý stavový sloupec"]
+    DRAW --> KEY["[Console]::ReadKey"]
+    KEY --> ARROWS{"↑/↓?"}
+    ARROWS -->|ano| MOVE["Posunout výběr"] --> LOOP
+    ARROWS -->|ne| ENTERQ{"Enter / číslo?"}
+    ENTERQ -->|ano| EXEC["Spustit Action"]
+    ENTERQ -->|ne| ESCQ{"Esc / q?"}
+    ESCQ -->|ano| END["Konec"]
+    ESCQ -->|ne| LOOP
+    EXEC --> INLINE{"-Inline?"}
+    INLINE -->|ano| LOOP
+    INLINE -->|ne| END
 ```
 
 ## Hierarchie menu
@@ -141,7 +144,7 @@ bin/menu.ps1                  bin/check.ps1
     ▼                           ▼
 ┌─────────────────────────────────────────┐
 │           Toolkit.psd1 (manifest)       │
-│  FunctionsToExport: 30 functions         │
+│  FunctionsToExport: 36 functions         │
 └─────────────────────────────────────────┘
     │
     │ RootModule
@@ -159,11 +162,17 @@ bin/menu.ps1                  bin/check.ps1
 └────────────┘ └────────────┘ └──────────────┘
 ```
 
-## GUID profilů Windows Terminal
+## Profily Windows Terminal (fragment extension, párováno jménem)
 
-| Profil | GUID | Příkaz |
-|--------|------|--------|
-| Menu | `{11111111-1111-1111-1111-111111111111}` | `pwsh.exe` → `menu-main.ps1` |
-| Projekty | `{22222222-2222-2222-2222-222222222222}` | `pwsh.exe` → `~/Projects/work` |
-| PowerShell 7 | `{33333333-3333-3333-3333-333333333333}` | `pwsh.exe` → `~` |
-| WinPS 5.1 | `{44444444-4444-4444-4444-444444444444}` | `powershell.exe` → `~` |
+Žádné GUID — WT fragment extensions párují profily podle `name`. `Menu`/`Projekty` jsou nové
+vlastní profily (shell integration povolena). `PowerShell 7`/`Windows PowerShell 5.1` **aktualizují
+existující vestavěné profily stejného jména** — záměrně jen o `icon`/`tabTitle`, nikdy o
+font/colorScheme/shell-integration, aby se tiše nepřepsalo uživatelovo vlastní nastavení.
+
+| Profil | Typ | Příkaz |
+|--------|-----|--------|
+| Menu | nový, vlastní | `pwsh.exe` → `menu-main.ps1` |
+| Projekty | nový, vlastní | `pwsh.exe` → `~/Projects/work` |
+| PowerShell 7 | update vestavěného | `pwsh.exe` → `~` |
+| Windows PowerShell 5.1 | update vestavěného | `powershell.exe` → `~` |
+| WSL: `<distro>` | auto-detekováno (`wsl -l -q`) | `wsl.exe -d <distro>` |

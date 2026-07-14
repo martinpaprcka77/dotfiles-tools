@@ -15,8 +15,8 @@
 | **Companion repo** | [dotfiles-powershell](https://github.com/martinpaprcka77/dotfiles-powershell) (`~/.config/powershell/`) |
 | **Portal** | [martinpaprcka77.github.io](https://martinpaprcka77.github.io) |
 | **Language** | PowerShell 5.1 / 7+ |
-| **Module** | `Toolkit` — 22 exported functions |
-| **Tests** | 25+ Pester cases in `tests/Toolkit.Tests.ps1` |
+| **Module** | `Toolkit` — 36 exported functions |
+| **Tests** | 63 Pester cases in `tests/Toolkit.Tests.ps1` |
 | **Dependencies** | dotfiles-powershell (provides `$env:DOTFILES_TOOLS`), Git, Docker (optional) |
 
 ---
@@ -37,33 +37,48 @@
 │
 ├── lib/                     ← source functions (dot-sourced by Toolkit.psm1)
 │   ├── common.ps1           ← Test-Admin, Write-Info/Success/Warn/Err, Confirm-Action
-│   ├── menu.ps1             ← Show-Menu — generic numbered menu engine
+│   ├── menu.ps1             ← Show-Menu — arrow-key menu engine with live status column
 │   ├── checkers.ps1         ← Get-DiskStatus, Get-ServiceStatus, Get-NetworkInfo, Get-TopProcesses, Invoke-SystemCheck
-│   └── config.ps1           ← Get-ToolkitConfig (defaults→JSON→env merge), Save-ToolkitConfig, Merge-Hashtable
+│   ├── config.ps1           ← Get-ToolkitConfig (defaults→JSON→env merge), Save-ToolkitConfig, Merge-Hashtable
+│   ├── modulepath.ps1       ← Get/Add/Remove/Reset/Export/Import/Test-PSModulePath (7 functions)
+│   └── detectors.ps1        ← Show-Menu live-status detectors + Invoke-IfAvailable guard
 │
 ├── Toolkit/                 ← PowerShell module
-│   ├── Toolkit.psd1         ← manifest — 22 FunctionsToExport
-│   └── Toolkit.psm1         ← dot-sources all lib/*.ps1, Export-ModuleMember
+│   ├── Toolkit.psd1         ← manifest — 36 FunctionsToExport
+│   └── Toolkit.psm1         ← dot-sources all lib/*.ps1 and menu/menu-*.ps1, Export-ModuleMember
 │
 ├── menu/                    ← standalone scripts (can run directly or via module)
-│   ├── menu-main.ps1        ← Start-MainMenu — Docker, System, Git, Tools, Exit
+│   ├── menu-main.ps1        ← Start-MainMenu — Status, Dotfiles, System, Docker, Git, Terminal, PowerShell, VS Code, Exit
 │   ├── menu-docker.ps1      ← Show-DockerMenu — ps, images, stats, system df, logs
-│   └── menu-git.ps1         ← Show-GitMenu — status, log, branch, remote, stash, commit
+│   ├── menu-git.ps1         ← Show-GitMenu — status, log, branch, remote, stash, commit
+│   ├── menu-terminal.ps1    ← Show-TerminalMenu — WT profiles, schemes, fonts, shell integration
+│   ├── menu-dotfiles.ps1    ← Show-DotfilesMenu — install, update, backup, restore, configure, modernize, windows
+│   ├── menu-pwsh.ps1        ← Show-PwshMenu — edit/reload profile, performance, modules, modulepath
+│   └── menu-vscode.ps1      ← Show-VSCodeMenu — settings, tasks, agent, backup
 │
 ├── scripts/
-│   ├── Add-WTProfiles.ps1   ← Windows Terminal setup (4 profiles, WhatIf, BOM-free save)
+│   ├── Add-WTProfiles.ps1   ← Windows Terminal JSON fragment generator (WhatIf, BOM-free save, WSL auto-detect)
 │   ├── Generate-Icons.ps1   ← PNG icon generator (System.Drawing, 32×32)
 │   ├── configure.ps1        ← interactive config wizard (5 steps)
-│   └── setup-repos.ps1      ← Git+GitHub automation (gh repo create + push)
+│   ├── setup-repos.ps1      ← Git+GitHub automation (gh repo create + push)
+│   ├── deps.ps1             ← winget dependency installer
+│   ├── windows.ps1          ← Windows defaults (Explorer, taskbar, privacy, bloatware)
+│   ├── modernize.ps1        ← PSResourceGet migration, legacy module cleanup
+│   └── precheck.ps1         ← read-only pre-install inventory (30+ checks)
 │
-├── configs/settings.json    ← default config (theme, docker, system checks)
-├── tests/Toolkit.Tests.ps1  ← Pester tests (6 contexts, 25+ cases, Mock coverage)
+├── configs/
+│   ├── settings.json        ← default config (theme, docker, system checks)
+│   └── wt-schemes.json      ← WT color schemes — single source of truth, read by Add-WTProfiles.ps1
+├── tests/Toolkit.Tests.ps1  ← Pester tests (63 cases, Mock coverage)
 ├── icons/README.md          ← instructions to run Generate-Icons.ps1
+├── .vscode/                 ← settings.json, tasks.json, agent-instructions.md
+├── .github/workflows/       ← test.yml (Windows CI)
+├── githooks/                ← post-checkout/post-merge reminders, install.sh
 │
 └── docs/
-    ├── ARCHITECTURE.md       ← 6 Mermaid UML diagrams
-    ├── MANUAL.md             ← 11-section user guide
-    ├── ROADMAP.md            ← 5 phases, known issues, contribution guide
+    ├── ARCHITECTURE.md       ← Mermaid UML diagrams
+    ├── MANUAL.md             ← user guide
+    ├── ROADMAP.md            ← phases, known issues, contribution guide
     └── PROMPT.md             ← original AI prompt
 ```
 
@@ -121,18 +136,27 @@ Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
 - **Config**: merge defaults → JSON file → env vars (`$env:TOOLKIT_*`)
 - **Cross-platform**: `$IsWindows` guard on Windows Terminal & System.Drawing scripts
 - **Mock-friendly**: menus use `Show-Menu` engine (mockable), checkers use `Get-CimInstance` (mockable)
+- **Watch for short-name collisions with PowerShell's own built-in aliases** (`Get-Command -CommandType Alias`)
+  before picking a 2-4 letter function/alias name — a built-in ALIAS always wins over a same-named
+  FUNCTION in command resolution, silently. This shipped as a real bug in the companion repo: `gcm`/`gps`
+  git shortcuts (defined as functions) were shadowed by PowerShell's built-in `gcm`→`Get-Command` and
+  `gps`→`Get-Process` aliases and never actually ran — no error, just silently wrong behavior. Fix pattern:
+  `Remove-Item Alias:<name> -Force -ErrorAction SilentlyContinue` before defining the function, or use
+  `Set-Alias -Force` (which correctly overrides, unlike a same-named function).
 
 ---
 
-## Toolkit module — 22 exported functions
+## Toolkit module — 36 exported functions
 
 | Category | Functions |
 |----------|-----------|
-| Menu | `Start-MainMenu`, `Show-DockerMenu`, `Show-GitMenu`, `Show-Menu` |
+| Menu | `Start-MainMenu`, `Show-DockerMenu`, `Show-GitMenu`, `Show-TerminalMenu`, `Show-DotfilesMenu`, `Show-PwshMenu`, `Show-VSCodeMenu`, `Show-Menu` |
 | Diagnostics | `Invoke-SystemCheck`, `Get-DiskStatus`, `Get-ServiceStatus`, `Get-NetworkInfo`, `Get-TopProcesses` |
 | Utility | `Test-Admin`, `Get-ScriptDirectory`, `Confirm-Action` |
 | Logging | `Write-Info`, `Write-Success`, `Write-Warn`, `Write-Err` |
 | Config | `Get-ToolkitConfig`, `Save-ToolkitConfig`, `Merge-Hashtable` |
+| PSModulePath | `Get-PSModulePath`, `Add-PSModulePath`, `Remove-PSModulePath`, `Reset-PSModulePath`, `Export-PSModulePath`, `Import-PSModulePath`, `Test-PSModulePath` |
+| Detectors | `Get-ModuleStackStatus`, `Test-LegacyPowerShellGetPresent`, `Test-PSResourceGetReady`, `Get-DotfilesCompanionStatus`, `Get-ModulePathStatus`, `Invoke-IfAvailable` |
 
 ---
 
