@@ -7,7 +7,7 @@
 
 function Start-MainMenu {
     $items = [ordered]@{
-        '1. 📊 Status'     = @{ Action = { Show-Status };           Desc = 'Global dashboard: Dotfiles, Terminal, PS, VS Code, Git, Docker' }
+        '1. 📊 Status'     = @{ Action = { Invoke-IfAvailable -Command 'Show-Status' -Action { Show-Status } }; Desc = 'Global dashboard: Dotfiles, Terminal, PS, VS Code, Git, Docker'; Detector = { Get-DotfilesCompanionStatus } }
         '2. ⚡ Dotfiles'   = @{ Action = { Show-DotfilesMenu };     Desc = 'Install, update, configure, precheck, backup, restore, clean' }
         '3. 🔍 Systém'     = @{ Action = { Invoke-SystemCheck };    Desc = 'Disk, services, network, top processes' }
         '4. 🐳 Docker'     = @{ Action = { Show-DockerMenu };       Desc = 'Containers, images, stats, logs, prune' }

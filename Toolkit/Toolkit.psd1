@@ -39,7 +39,13 @@
         'Reset-PSModulePath',
         'Export-PSModulePath',
         'Import-PSModulePath',
-        'Test-PSModulePath'
+        'Test-PSModulePath',
+        'Test-LegacyPowerShellGetPresent',
+        'Test-PSResourceGetReady',
+        'Get-ModuleStackStatus',
+        'Get-DotfilesCompanionStatus',
+        'Get-ModulePathStatus',
+        'Invoke-IfAvailable'
     )
 
     CmdletsToExport   = @()

@@ -42,6 +42,10 @@ Write-Host "   Target: PowerShell 7.6+ ready, PSResourceGet primary`n"
 if (-not $SkipCleanup -and -not $SecurityOnly) {
     Write-Step "Removing legacy modules..."
 
+    # Keep in sync with lib/detectors.ps1's Test-LegacyPowerShellGetPresent —
+    # that function checks the SAME paths/modules to decide the menu's live
+    # status icon; a mismatch here would mean the menu and this script could
+    # disagree about whether legacy modules are present.
     $modulePaths = @(
         "$env:ProgramFiles\PowerShell\7\Modules",
         "$env:ProgramFiles\WindowsPowerShell\Modules"
