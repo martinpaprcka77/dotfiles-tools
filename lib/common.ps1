@@ -10,8 +10,15 @@
 <#
 .SYNOPSIS
     Zjistí, zda je aktuální session spuštěna jako administrátor.
+.NOTES
+    Windows-only. $IsWindows doesn't exist on PS5.1 (PS6+ automatic variable);
+    PS5.1 only ever runs on Windows, so the version check covers it.
 #>
 function Test-Admin {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "Test-Admin is Windows-only."
+        return $false
+    }
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]$identity
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

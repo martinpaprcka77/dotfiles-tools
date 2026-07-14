@@ -20,7 +20,8 @@ $script:Config = $null
     $cfg.system.checkDisks   # $true
 #>
 function Get-ToolkitConfig {
-    if ($script:Config) { return $script:Config }
+    param([switch]$Force)
+    if ($script:Config -and -not $Force) { return $script:Config }
 
     # ── Defaults ──────────────────────────────────────────────
     $defaults = @{
@@ -96,6 +97,9 @@ function Save-ToolkitConfig {
     param([hashtable]$Config)
     $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
     $configFile = Join-Path $toolsRoot 'configs\settings.json'
+    if (Test-Path $configFile) {
+        Copy-Item -Path $configFile -Destination "$configFile.backup" -Force
+    }
     $json = $Config | ConvertTo-Json -Depth 5
     Set-Content -Path $configFile -Value $json -Encoding UTF8
     $script:Config = $Config

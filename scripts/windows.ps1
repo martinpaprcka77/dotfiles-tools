@@ -155,8 +155,15 @@ if ($RemoveBloatware) {
 # ── Done ───────────────────────────────────────────────────────
 Write-Host "`nWindows defaults configured!" -ForegroundColor Green
 Write-Host "Some changes require Explorer restart or logoff to take effect." -ForegroundColor Yellow
-$restart = Read-Host "Restart Explorer now? ⚠️ This closes ALL Explorer windows. (y/N)"
-if ($restart -eq 'y') {
-    Stop-Process -Name explorer -Force
-    Write-Host "Explorer restarted." -ForegroundColor Green
+# This prompt is outside every per-setting ShouldProcess check above, so it
+# must respect $WhatIfPreference explicitly — a -WhatIf run must never
+# actually kill Explorer, even if the user answers 'y' at this prompt.
+if ($WhatIfPreference) {
+    Write-Host "What if: Restart Explorer now? (skipped — -WhatIf)" -ForegroundColor Cyan
+} else {
+    $restart = Read-Host "Restart Explorer now? ⚠️ This closes ALL Explorer windows. (y/N)"
+    if ($restart -eq 'y') {
+        Stop-Process -Name explorer -Force
+        Write-Host "Explorer restarted." -ForegroundColor Green
+    }
 }

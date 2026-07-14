@@ -10,8 +10,14 @@
 <#
 .SYNOPSIS
     Zobrazí stav disků (volné místo, celková kapacita).
+.NOTES
+    Windows-only (Win32_LogicalDisk CIM class).
 #>
 function Get-DiskStatus {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "Get-DiskStatus is Windows-only (CIM/WMI)."
+        return
+    }
     Write-Info "Kontrola disků..."
 
     Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" |
@@ -25,8 +31,14 @@ function Get-DiskStatus {
 <#
 .SYNOPSIS
     Zobrazí stav klíčových služeb.
+.NOTES
+    Windows-only (Get-Service targets the Windows Service Control Manager).
 #>
 function Get-ServiceStatus {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "Get-ServiceStatus is Windows-only."
+        return
+    }
     Write-Info "Kontrola služeb..."
 
     $services = @('WinRM', 'W3SVC', 'Docker', 'Spooler', 'WSearch')
@@ -38,8 +50,14 @@ function Get-ServiceStatus {
 <#
 .SYNOPSIS
     Zobrazí základní síťové informace.
+.NOTES
+    Windows-only (Get-NetIPAddress requires the NetTCPIP module, Windows-only).
 #>
 function Get-NetworkInfo {
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "Get-NetworkInfo is Windows-only."
+        return
+    }
     Write-Info "Síťové informace..."
 
     Get-NetIPAddress -AddressFamily IPv4 |

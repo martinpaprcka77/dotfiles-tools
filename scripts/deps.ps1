@@ -39,8 +39,11 @@ function Write-Fail { param([string]$M) Write-Host "  [x] $M" -ForegroundColor R
 function Install-Pkg {
     param([string]$Id, [string]$Name, [string]$ExtraArgs)
     Write-Step "$Name ($Id)..."
-    $installed = winget list --id $Id --exact 2>&1 | Select-String $Id
-    if ($installed) {
+    # Local var named distinctly from $script:installed (the summary counter
+    # Write-Ok increments) — same name here previously shadowed it, harmless
+    # but confusing since $script:installed++ still worked via explicit scope.
+    $found = winget list --id $Id --exact 2>&1 | Select-String $Id
+    if ($found) {
         Write-Skip "Already installed: $Name"
         return
     }
@@ -107,13 +110,15 @@ if ($alreadyInstalled) {
                 $fontCollection.Namespace(0x14).CopyHere($ttf.FullName, 0x10)
             }
             Write-Ok "Installed $($ttfFiles.Count) font files (Cascadia Code Nerd Font)"
-
-            # Cleanup
-            Remove-Item $fontZip -ErrorAction SilentlyContinue
-            Remove-Item $fontDir -Recurse -ErrorAction SilentlyContinue
         } catch {
             Write-Fail "Font install failed: $_"
             Write-Host "  Manual install: https://github.com/ryanoasis/nerd-fonts/releases/latest" -ForegroundColor Yellow
+        } finally {
+            # finally (not just the happy-path cleanup that used to sit inside
+            # try) — otherwise a throw from Invoke-WebRequest/Expand-Archive
+            # leaves the temp zip/dir behind.
+            Remove-Item $fontZip -ErrorAction SilentlyContinue
+            Remove-Item $fontDir -Recurse -ErrorAction SilentlyContinue
         }
     }
 }
