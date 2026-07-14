@@ -112,9 +112,13 @@ function Remove-PSModulePath {
     Reset-PSModulePath
 #>
 function Reset-PSModulePath {
+    # $env:USERPROFILE\Documents\... was here previously — exactly the
+    # OneDrive-affected path this function's own OneDrive-pollution check
+    # (Test-PSModulePath) warns about. LOCALAPPDATA is never a Known-Folder
+    # redirection target, so it's the actually-safe "modern baseline" entry.
     $modern = @(
         "$env:ProgramFiles\PowerShell\7\Modules",
-        "$env:USERPROFILE\Documents\PowerShell\Modules"
+        "$env:LOCALAPPDATA\PowerShell\Modules"
     )
     Write-Host "`n🔄 Resetting PSModulePath to modern baseline..." -ForegroundColor Magenta
     foreach ($p in $modern) {
