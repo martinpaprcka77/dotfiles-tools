@@ -90,7 +90,23 @@ function Show-Menu {
             if ($r -and $r.Text) { $maxDetectorWidth = [Math]::Max($maxDetectorWidth, $r.Text.Length + 4) }
         }
     }
-    $boxWidth = [Math]::Max($Title.Length, $maxLabelWidth + $maxDescWidth + $maxDetectorWidth) + 4
+    $naturalWidth = [Math]::Max($Title.Length, $maxLabelWidth + $maxDescWidth + $maxDetectorWidth) + 4
+    # Clamp to the terminal's actual width — a long Desc/Detector string
+    # otherwise pushes the box past the console width, the terminal wraps the
+    # line, and the box-drawing border breaks (field-reported). Leave room
+    # for the "  │ "/"│" frame (6 cols); never go narrower than a sane floor.
+    $maxAvailableWidth = [Math]::Max(20, [Console]::WindowWidth - 6)
+    $boxWidth = [Math]::Min($naturalWidth, $maxAvailableWidth)
+
+    # Truncates $Text to fit $MaxLength, appending an ellipsis if it doesn't.
+    # Local to Show-Menu — a rendering detail, not part of the public API.
+    function Get-TruncatedText {
+        param([string]$Text, [int]$MaxLength)
+        if ($MaxLength -le 0) { return '' }
+        if ($Text.Length -le $MaxLength) { return $Text }
+        if ($MaxLength -eq 1) { return '…' }
+        return $Text.Substring(0, $MaxLength - 1) + '…'
+    }
 
     # ── Hide cursor ────────────────────────────────────────────
     $prevCursor = [Console]::CursorVisible
@@ -131,17 +147,34 @@ function Show-Menu {
             $key = $keys[$i]
             $item = $normalized[$key]
             $det = $detectorCache[$key]
-            $detText = if ($det -and $det.Text) { "$($det.Icon) $($det.Text)" } else { '' }
+            $detTextRaw = if ($det -and $det.Text) { "$($det.Icon) $($det.Text)" } else { '' }
+
+            # Fit Desc + Detector text into the box width, trimming the
+            # detector text first, then the description, instead of letting
+            # a long status string push the row past the console width.
+            $extraBudget = [Math]::Max(0, $boxWidth - $key.Length - 4)
+            $desc = $item.Desc
+            $detText = $detTextRaw
+            $combinedLen = $desc.Length + $(if ($detText) { $detText.Length + 2 } else { 0 })
+            if ($combinedLen -gt $extraBudget) {
+                $detRoom = [Math]::Max(0, $extraBudget - $desc.Length - 2)
+                $detText = if ($detText -and $detRoom -gt 0) { Get-TruncatedText $detText $detRoom } else { '' }
+                if ($desc.Length -gt $extraBudget) {
+                    $desc = Get-TruncatedText $desc $extraBudget
+                    $detText = ''
+                }
+            }
+
             $detLen = if ($detText) { $detText.Length + 2 } else { 0 }
-            $pad = [Math]::Max(0, $boxWidth - $key.Length - ($item.Desc.Length + 2) - $detLen)
+            $pad = [Math]::Max(0, $boxWidth - $key.Length - ($desc.Length + 2) - $detLen)
 
             if ($i -eq $selected) {
                 Write-Host '  │ ' -ForegroundColor DarkGray -NoNewline
                 Write-Host '▸' -ForegroundColor $accent -NoNewline
                 Write-Host " $key " -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
-                if ($item.Desc) {
+                if ($desc) {
                     Write-Host ' ' -BackgroundColor $highlightBg -NoNewline
-                    Write-Host $item.Desc -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
+                    Write-Host $desc -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
                 }
                 if ($detText) {
                     Write-Host '  ' -BackgroundColor $highlightBg -NoNewline
@@ -152,9 +185,9 @@ function Show-Menu {
             } else {
                 Write-Host '  │  ' -ForegroundColor DarkGray -NoNewline
                 Write-Host $key -ForegroundColor White -NoNewline
-                if ($item.Desc) {
+                if ($desc) {
                     Write-Host '  ' -NoNewline
-                    Write-Host $item.Desc -ForegroundColor DarkGray -NoNewline
+                    Write-Host $desc -ForegroundColor DarkGray -NoNewline
                 }
                 if ($detText) {
                     Write-Host '  ' -NoNewline

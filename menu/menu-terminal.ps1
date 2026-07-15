@@ -7,6 +7,10 @@
 
 function Show-TerminalMenu {
     $fragPath = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json"
+    # scripts/Add-WTProfiles.ps1 lives inside THIS repo — $env:DOTFILES_TOOLS is only ever set by
+    # the companion profile, so fall back to deriving our own root when it isn't loaded (e.g. the
+    # WT "Menu" profile launches menu-main.ps1 directly, without dotfiles-powershell's profile).
+    $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
     $items = [ordered]@{
         '1. 📊 Check Status'     = @{ Action = {
             if (Test-Path $fragPath) {
@@ -21,7 +25,7 @@ function Show-TerminalMenu {
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Current fragment: profiles, schemes, font, marks status' }
         '2. 🔄 Generate/Update'  = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\Add-WTProfiles.ps1'
+            $s = Join-Path $toolsRoot 'scripts\Add-WTProfiles.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "Not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Create/update JSON fragment with 4 profiles + 7 schemes' }
@@ -49,7 +53,7 @@ function Show-TerminalMenu {
             $c = Read-Host "Delete fragment and regenerate? (y/N)"
             if ($c -eq 'y') {
                 Remove-Item $fragPath -Force -ErrorAction SilentlyContinue
-                $s = Join-Path $env:DOTFILES_TOOLS 'scripts\Add-WTProfiles.ps1'
+                $s = Join-Path $toolsRoot 'scripts\Add-WTProfiles.ps1'
                 if (Test-Path $s) { & $s }
             }
             Read-Host "`nStiskni Enter..."
