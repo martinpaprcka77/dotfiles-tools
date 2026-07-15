@@ -8,7 +8,7 @@
 function Show-PwshMenu {
     $profilePath = Join-Path $HOME '.config\powershell\profile.ps1'
     $items = [ordered]@{
-        '1. 📊 Check Status'   = @{ Action = { Show-Status }; Desc = 'Full ecosystem health dashboard' }
+        '1. 📊 Check Status'   = @{ Action = { Invoke-IfAvailable -Command 'Show-Status' -Action { Show-Status } }; Desc = 'Full ecosystem health dashboard'; Detector = { Get-DotfilesCompanionStatus } }
         '2. ✏️  Edit Profile'   = @{ Action = {
             $e = if ($env:EDITOR) { $env:EDITOR } elseif (Get-Command code -ErrorAction SilentlyContinue) { 'code' } else { 'notepad' }
             & $e $profilePath
@@ -43,21 +43,21 @@ function Show-PwshMenu {
         }; Desc = 'Restore profile.ps1 from backup' }
         '6. ⚡ Performance'     = @{ Action = {
             $sub = [ordered]@{
-                '1. Run Benchmark'   = @{ Action = { Measure-Profile }; Desc = 'Detailed step-by-step timing' }
-                '2. Module Analysis' = @{ Action = { Optimize-ModuleLoading }; Desc = 'Lazy loading suggestions' }
-                '3. Profile Size'    = @{ Action = { Get-ProfileSize }; Desc = 'Lines, bytes, file count' }
-                '4. Clear Cache'     = @{ Action = { Clear-PSCache }; Desc = 'Clean corrupted module caches' }
-                '5. ETW Profiling'   = @{ Action = { Write-Info "Starting ETW trace... run commands, then Stop-PSProfiling"; Start-PSProfiling }; Desc = 'Start ETW trace for deep diagnostics' }
-                '6. Event Logs'      = @{ Action = { Get-PSEventLog }; Desc = 'PowerShell event log sizes and properties' }
+                '1. Run Benchmark'   = @{ Action = { Invoke-IfAvailable -Command 'Measure-Profile' -Action { Measure-Profile } }; Desc = 'Detailed step-by-step timing' }
+                '2. Module Analysis' = @{ Action = { Invoke-IfAvailable -Command 'Optimize-ModuleLoading' -Action { Optimize-ModuleLoading } }; Desc = 'Lazy loading suggestions' }
+                '3. Profile Size'    = @{ Action = { Invoke-IfAvailable -Command 'Get-ProfileSize' -Action { Get-ProfileSize } }; Desc = 'Lines, bytes, file count' }
+                '4. Clear Cache'     = @{ Action = { Invoke-IfAvailable -Command 'Clear-PSCache' -Action { Clear-PSCache } }; Desc = 'Clean corrupted module caches' }
+                '5. ETW Profiling'   = @{ Action = { Invoke-IfAvailable -Command 'Start-PSProfiling' -Action { Write-Info "Starting ETW trace... run commands, then Stop-PSProfiling"; Start-PSProfiling } }; Desc = 'Start ETW trace for deep diagnostics' }
+                '6. Event Logs'      = @{ Action = { Invoke-IfAvailable -Command 'Get-PSEventLog' -Action { Get-PSEventLog } }; Desc = 'PowerShell event log sizes and properties' }
                 '7. ↩️  Back'         = @{ Action = { return } }
             }
             Show-Menu -Title 'PERFORMANCE' -Items $sub
-        }; Desc = 'Benchmark, analyze, optimize, clear caches' }
+        }; Desc = 'Benchmark, analyze, optimize, clear caches'; Detector = { Get-DotfilesCompanionStatus } }
         '7. 📦 Modules'        = @{ Action = {
             Write-Host "`n  Loaded:" -ForegroundColor Cyan
             Get-Module | Where-Object { $_.Name -notmatch '^Microsoft\.|^Cim|^PSReadLine$' } | Select Name, Version | Sort Name | ForEach-Object { Write-Host "    $($_.Name) v$($_.Version)" }
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'All loaded PowerShell modules' }
+        }; Desc = 'All loaded PowerShell modules'; Detector = { Get-ModuleStackStatus } }
         '8. 📂 ModulePath'      = @{ Action = {
             $sub = [ordered]@{
                 '1. List Paths'       = @{ Action = { Get-PSModulePath | Out-Null }; Desc = 'Show all entries with validation' }
@@ -70,7 +70,7 @@ function Show-PwshMenu {
                 '8. ↩️  Back'          = @{ Action = { return } }
             }
             Show-Menu -Title 'MODULE PATH' -Items $sub
-        }; Desc = 'List, add, remove, reset, export/import PSModulePath' }
+        }; Desc = 'List, add, remove, reset, export/import PSModulePath'; Detector = { Get-ModulePathStatus } }
         '9. ↩️  Back'           = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'POWERSHELL' -Items $items

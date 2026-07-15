@@ -7,7 +7,7 @@
 
 function Show-DotfilesMenu {
     $items = [ordered]@{
-        '1. 📊 Check Status'     = @{ Action = { Show-Status }; Desc = 'Full ecosystem health dashboard' }
+        '1. 📊 Check Status'     = @{ Action = { Invoke-IfAvailable -Command 'Show-Status' -Action { Show-Status } }; Desc = 'Full ecosystem health dashboard'; Detector = { Get-DotfilesCompanionStatus } }
         '2. 📥 Install/Reinstall'= @{ Action = {
             $s = Join-Path $HOME '.config\powershell\install.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "install.ps1 not found" }
@@ -22,13 +22,21 @@ function Show-DotfilesMenu {
             $backupDir = Join-Path $HOME '.config\powershell\backups'
             New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
             $ts = Get-Date -Format 'yyyyMMdd-HHmmss'
-            $profiles = @(
-                "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1",
-                "$HOME\Documents\PowerShell\Microsoft.VSCode_profile.ps1",
-                "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1",
-                "$HOME\Documents\WindowsPowerShell\Microsoft.VSCode_profile.ps1",
-                (Join-Path $HOME '.config\powershell\profile.ps1')
-            )
+            # Known-Folder-correct when available (Get-NativeProfilePaths lives in
+            # the companion dotfiles-powershell repo's lib/paths.ps1, loaded if its
+            # profile is active this session) — falls back to the naive $HOME guess
+            # otherwise, same as it always did.
+            $profiles = if (Get-Command Get-NativeProfilePaths -ErrorAction SilentlyContinue) {
+                @(Get-NativeProfilePaths) + (Join-Path $HOME '.config\powershell\profile.ps1')
+            } else {
+                @(
+                    "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1",
+                    "$HOME\Documents\PowerShell\Microsoft.VSCode_profile.ps1",
+                    "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1",
+                    "$HOME\Documents\WindowsPowerShell\Microsoft.VSCode_profile.ps1",
+                    (Join-Path $HOME '.config\powershell\profile.ps1')
+                )
+            }
             $saved = 0
             foreach ($p in $profiles) {
                 if (Test-Path $p) {
@@ -51,7 +59,8 @@ function Show-DotfilesMenu {
             if ($c -match '^\d+$' -and [int]$c -ge 1 -and [int]$c -le $backups.Count) {
                 $src = $backups[[int]$c-1]
                 $origName = $src.Name -replace '\.\d{8}-\d{6}\.bak$', ''
-                $dest = "$HOME\Documents\PowerShell\$origName"
+                $docsBase = if (Get-Command Resolve-DocumentsPath -ErrorAction SilentlyContinue) { Resolve-DocumentsPath } else { "$HOME\Documents" }
+                $dest = Join-Path $docsBase "PowerShell\$origName"
                 Copy-Item $src.FullName $dest -Force
                 Write-Success "Restored: $dest"
             }
@@ -79,7 +88,7 @@ function Show-DotfilesMenu {
             $s = Join-Path $env:DOTFILES_TOOLS 'scripts\modernize.ps1'
             if (Test-Path $s) { Write-Info "Running modernize.ps1..."; & $s } else { Write-Err "modernize.ps1 not found" }
             Read-Host "`nStiskni Enter..."
-        }; Desc = 'PSResourceGet, cleanup legacy, security baseline, PS 7.6+ ready' }
+        }; Desc = 'PSResourceGet, cleanup legacy, security baseline, PS 7.6+ ready'; Detector = { Get-ModuleStackStatus } }
         '10. 🪟 Windows Defaults' = @{ Action = {
             $s = Join-Path $env:DOTFILES_TOOLS 'scripts\windows.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "windows.ps1 not found" }

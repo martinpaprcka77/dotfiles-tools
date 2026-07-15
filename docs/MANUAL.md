@@ -16,17 +16,21 @@ check        # systémová diagnostika
 
 ## 2. Hlavní menu (`menu` / `Start-MainMenu`)
 
-Interaktivní číselné menu pro každodenní operace.
-
-### Položky menu
+Interaktivní menu s navigací šipkami (arrow-key, `[Console]::ReadKey`) — číselné zkratky
+fungují jako doplněk, ne jako jediný způsob ovládání. Aktuální 9-položková struktura je
+podrobně popsaná v [§15](#15-aktuální-menu-struktura); zde jen stručný přehled:
 
 | # | Položka | Akce |
 |---|---------|------|
-| 1 | Docker | Otevře Docker submenu |
-| 2 | Systém | Spustí `Invoke-SystemCheck` |
-| 3 | Git | Otevře Git submenu |
-| 4 | Nástroje | Placeholder (rozšířitelné) |
-| 5 | Konec | Ukončí menu |
+| 1 | 📊 Status | `Show-Status` (vyžaduje načtený profil dotfiles-powershell) |
+| 2 | ⚡ Dotfiles | Otevře Dotfiles submenu |
+| 3 | 🔍 Systém | Spustí `Invoke-SystemCheck` |
+| 4 | 🐳 Docker | Otevře Docker submenu |
+| 5 | 📋 Git | Otevře Git submenu |
+| 6 | 🖥️ Terminal | Otevře Terminal submenu |
+| 7 | 💻 PowerShell | Otevře PowerShell submenu |
+| 8 | 📝 VS Code | Otevře VS Code submenu |
+| 9 | 🚪 Exit | Ukončí menu |
 
 ### Použití
 
@@ -124,17 +128,21 @@ Get-TopProcesses     # jen procesy
 
 ## 6. Windows Terminal profily (`Add-WTProfiles.ps1`)
 
-Automaticky přidá 4 profily do Windows Terminálu.
+Vygeneruje **JSON fragment extension** — Microsoftem doporučený způsob od WT 1.24+. Nikdy needituje
+uživatelovo `settings.json` přímo, takže nemusí odstraňovat `//` komentáře ani nic parsovat/zapisovat
+zpět do existujícího souboru. Žádné GUID — profily se párují podle `name`.
 
 ### Co dělá
 
-1. Najde `settings.json` (oba možné cesty)
-2. Vytvoří zálohu s časovým razítkem
-3. Odstraní `//` komentáře (nevalidní JSON)
-4. Přidá/aktualizuje 4 profily s pevnými GUID
-5. Ověří existenci ikon, jinak nastaví `null`
-6. Uloží bez BOM (UTF-8)
-7. Vygeneruje `profiles-fragment.json`
+1. Zkontroluje, jestli fragment už existuje (`-Force` pro přepsání)
+2. Detekuje WSL distribuce (`wsl -l -q`) a přidá jim vlastní profily
+3. Sestaví profily: `Menu`, `Projekty` (nové, vlastní — s povolenou shell integrací),
+   `PowerShell 7`, `Windows PowerShell 5.1` (**aktualizují existující vestavěné profily** stejného
+   jména — záměrně jen `icon`/`tabTitle`, nikdy font/colorScheme/shell-integration, aby se tiše
+   nepřepsalo uživatelovo vlastní nastavení výchozích profilů)
+4. Načte barevná schémata z `configs/wt-schemes.json` (single source of truth)
+5. Zálohuje existující fragment (`.backup.<timestamp>`)
+6. Uloží fragment bez BOM (UTF-8) do `%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json`
 
 ### Použití
 
@@ -144,24 +152,29 @@ Automaticky přidá 4 profily do Windows Terminálu.
 
 # Suchý běh (WhatIf) — zobrazí, co by udělal, nic nemění
 ~/Projects/tools/scripts/Add-WTProfiles.ps1 -WhatIf
+
+# Přepsat existující fragment
+~/Projects/tools/scripts/Add-WTProfiles.ps1 -Force
 ```
 
-### Přidané profily
+### Přidané/aktualizované profily
 
-| Název | Spouští | Výchozí adresář | Ikona |
-|-------|---------|-----------------|-------|
-| Menu | `pwsh.exe` | `~/Projects/tools/menu` | `icons/menu.png` |
-| Projekty | `pwsh.exe` | `~/Projects/work` | `icons/projects.png` |
-| PowerShell 7 | `pwsh.exe` | `~` | `icons/pwsh7.png` |
-| Windows PowerShell 5.1 | `powershell.exe` | `~` | `icons/pwsh5.png` |
+| Název | Typ | Spouští | Výchozí adresář |
+|-------|-----|---------|------------------|
+| Menu | nový, vlastní | `pwsh.exe` | `~/Projects/tools` |
+| Projekty | nový, vlastní | `pwsh.exe` | `~/Projects/work` |
+| PowerShell 7 | update vestavěného | `pwsh.exe` | `~` |
+| Windows PowerShell 5.1 | update vestavěného | `powershell.exe` | `~` |
+| WSL: `<distro>` | auto-detekováno | `wsl.exe -d <distro>` | `//wsl$/Ubuntu/home` |
 
 ### Obnova ze zálohy
 
 ```powershell
-# Záloha je vedle settings.json:
-# settings.json.backup.20260708-120000
+# Záloha je vedle fragmentu:
+# dotfiles.json.backup.20260708-120000
 
-Copy-Item settings.json.backup.* settings.json
+Copy-Item "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json.backup.*" `
+    "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\dotfiles\dotfiles.json"
 ```
 
 ---

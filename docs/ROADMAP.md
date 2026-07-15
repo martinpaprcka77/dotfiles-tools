@@ -9,19 +9,24 @@ Plánované funkce a směr vývoje. Priority: 🔴 vysoká · 🟡 střední · 
 - ✅ Modulární PowerShell profil (`dotfiles-powershell`)
 - ✅ Idempotentní instalátor (`install.ps1` — WhatIf, Force, backup, summary)
 - ✅ Update mechanism (`update.ps1` — git fetch + reload)
-- ✅ Toolkit modul — **30 exportovaných funkcí**
+- ✅ Toolkit modul — **36 exportovaných funkcí**
 - ✅ Interaktivní menu — 7 submenus (Dotfiles, Docker, Git, Terminal, PowerShell, VS Code, Diagnostika)
 - ✅ Moderní menu engine — šipky ↑↓, zvýraznění, popisky, inline režim
 - ✅ Arrow-key menu s popisky u každé položky
+- ✅ Živá detekce stavu přímo v menu (`Detector` na položku — modul stack, PSModulePath, dostupnost
+  companion profilu) — bez nutnosti spouštět samostatný diagnostický příkaz
+- ✅ Jednopříkazový vzdálený bootstrapper (`remote-install.ps1`, `irm | iex`), Known-Folder-korektní
+  detekce cest (funguje i s přesměrovaným OneDrive Documents)
 - ✅ CRUD operace na všech menu (Check, Backup, Restore, Reset, Clean)
 - ✅ Systémová diagnostika (disky, služby, síť, procesy)
 - ✅ Windows Terminal profily — JSON fragment extensions (WT 1.24+)
 - ✅ 7 barevných schémat (One Half Dark, Dracula, Nord, TokyoNight, Catppuccin Mocha, Gruvbox Dark, Solarized Dark)
-- ✅ WT shell integration (OSC 133 markery, showMarksOnScrollbar, autoMarkPrompts)
+- ✅ WT shell integration (OSC 133 markery, showMarksOnScrollbar, autoMarkPrompts) — jen na
+  vlastních profilech (Menu, Projekty), nikdy implicitně na existujících výchozích profilech uživatele
 - ✅ Starship prompt (Rust) s `starship.toml` konfigurací (30+ modulů)
 - ✅ oh-my-posh jako fallback
 - ✅ Generování ikon (`Generate-Icons.ps1`)
-- ✅ 34 Pester testů (7 kontextů, Mock pokrytí)
+- ✅ 63 Pester testů (Mock pokrytí, config, PSModulePath, menu chybové cesty)
 - ✅ Bezpečné ukládání klíčů (`Get-SecretKey` — SecretManagement + env fallback)
 - ✅ `extra.ps1` pattern — uživatelské přizpůsobení mimo Git
 - ✅ AGENTS.md + CLAUDE.md v obou repozitářích
@@ -77,9 +82,15 @@ Plánované funkce a směr vývoje. Priority: 🔴 vysoká · 🟡 střední · 
 
 ## Fáze 5: Ekosystém (🟢)
 
-- [ ] **Web bootstrap** — `iex (iwr '...')` instalace bez Gitu
+- ✅ **Web bootstrap** — `irm <url> | iex` jednopříkazová instalace (`remote-install.ps1` v
+  dotfiles-powershell) — stále vyžaduje Git (klonuje repo); plně gitless varianta (stažení ZIP
+  místo klonu) zůstává otevřená jako budoucí vylepšení
 - [ ] **Instalační skript pro Windows** — kompletní setup z čisté instalace
 - [ ] **Dokumentační web** — statický web generovaný z Markdown dokumentace
+- [ ] **Sloučení do jednoho repa** — `dotfiles-powershell` + `dotfiles-tools` (případně i landing
+  page) do jednoho monorepa (`profile/` + `toolkit/` podadresáře). Odstranilo by to cross-repo
+  coupling (menu volající funkce, které existují jen v druhém repu) a zjednodušilo bootstrapper na
+  jeden clone. Zvažováno a odloženo — udělat, až bude ekosystém "hezký a superfunkční", ne teď.
 
 ---
 
@@ -87,9 +98,15 @@ Plánované funkce a směr vývoje. Priority: 🔴 vysoká · 🟡 střední · 
 
 | Problém | Stav | Plán |
 |---------|------|------|
-| `Add-WTProfiles.ps1` vyžaduje Windows Terminal | ✅ Vyřešeno | `$IsWindows` guard |
+| `Add-WTProfiles.ps1` vyžaduje Windows Terminal | ✅ Vyřešeno | Guard na `$IsLinux -or $IsMacOS` |
+| `Add-WTProfiles.ps1` — parse error, skript se vůbec nespustil | ✅ Vyřešeno | Loose statements uvnitř `@{ }` literálu přesunuty ven |
 | `Generate-Icons.ps1` vyžaduje .NET Framework | ✅ Vyřešeno | `$IsWindows` guard |
 | `deps.ps1` + `windows.ps1` — Windows-only | ✅ Vyřešeno | Platform guardy |
+| `windows.ps1 -WhatIf` přesto restartoval Explorer | ✅ Vyřešeno | Prompt respektuje `$WhatIfPreference` |
+| `gcm`/`gps` git zkratky nikdy nefungovaly (tiché stínění vestavěnými PS aliasy) | ✅ Vyřešeno | `Remove-Item Alias:` před definicí funkce |
+| `checkers.ps1`/`common.ps1` bez platform guardu — pád na Linuxu/macOS | ✅ Vyřešeno | `$isWindowsHost` guard |
+| `Reset-PSModulePath` vracel `Documents\...` — přesně OneDrive-postiženou cestu | ✅ Vyřešeno | `$env:LOCALAPPDATA\PowerShell\Modules` místo Documents |
+| 7 PSModulePath Pester testů selhává na Linuxu/macOS | Známé, netýká se Windows | Testovací fixtures používají `C:\Mods\...` — dvojtečka koliduje s `[IO.Path]::PathSeparator` (`:` na Linuxu/macOS, `;` na Windows); na reálném Windows testy procházejí, jde jen o testovací data, ne o chybu v kódu |
 | Cesty s diakritikou nejsou testovány | Netestováno | Přidat testy |
 | PS5 nepodporuje `&&` a `||` | Omezení PS5 | Používat `;` nebo `if` |
 

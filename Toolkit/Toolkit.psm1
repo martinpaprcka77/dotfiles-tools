@@ -63,5 +63,13 @@ Export-ModuleMember -Function @(
     'Reset-PSModulePath',
     'Export-PSModulePath',
     'Import-PSModulePath',
-    'Test-PSModulePath'
+    'Test-PSModulePath',
+
+    # Detectors (Show-Menu live-status support)
+    'Test-LegacyPowerShellGetPresent',
+    'Test-PSResourceGetReady',
+    'Get-ModuleStackStatus',
+    'Get-DotfilesCompanionStatus',
+    'Get-ModulePathStatus',
+    'Invoke-IfAvailable'
 )

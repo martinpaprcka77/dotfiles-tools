@@ -227,7 +227,8 @@ Describe 'Toolkit Module' {
             Reset-PSModulePath
             $entries = $env:PSModulePath -split [IO.Path]::PathSeparator
             $entries[0] | Should -Be "$env:ProgramFiles\PowerShell\7\Modules"
-            $entries[1] | Should -Be "$env:USERPROFILE\Documents\PowerShell\Modules"
+            # LOCALAPPDATA, never Documents — Documents can be OneDrive-redirected
+            $entries[1] | Should -Be "$env:LOCALAPPDATA\PowerShell\Modules"
         }
 
         It 'Export-PSModulePath writes JSON with the correct entry count' {

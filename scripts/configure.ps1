@@ -29,6 +29,10 @@ Write-Host   "  ║   DOTFILES CONFIGURATION WIZARD      ║" -ForegroundColor C
 Write-Host   "  ╚══════════════════════════════════════╝`n" -ForegroundColor Cyan
 
 if ($Reset) {
+    if (-not (Confirm-Action "This overwrites configs/settings.json with defaults, discarding your current settings. Continue?")) {
+        Write-Host "Reset cancelled." -ForegroundColor Yellow
+        return
+    }
     $default = @{
         menu   = @{ theme = 'default'; showHeader = $true; colorScheme = 'cyan' }
         docker = @{ defaultCommand = 'ps'; autoRefresh = $false }

@@ -1,6 +1,5 @@
 {
-  "//": "Windows Terminal color schemes — copy the schemes you want into your settings.json",
-  "//": "Source: https://windowsterminalthemes.dev/ + hand-picked favorites",
+  "//": "Windows Terminal color schemes, read by scripts/Add-WTProfiles.ps1 (single source of truth — do not also hardcode these inline). Source: https://windowsterminalthemes.dev/ + hand-picked favorites.",
   "schemes": [
     {
       "name": "One Half Dark",

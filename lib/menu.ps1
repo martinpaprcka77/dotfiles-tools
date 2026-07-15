@@ -14,7 +14,14 @@
 .PARAMETER Items
     Ordered hashtable. Two formats supported:
     - Simple:  key = { scriptblock }
-    - With desc: key = @{ Action = { scriptblock }; Desc = "What it does" }
+    - With desc/detector: key = @{ Action = { scriptblock }; Desc = "What it does";
+      Detector = { @{ Icon = '✅'|'⚠️'|'❌'; Text = '...' } } }
+    Detector is optional. It's re-evaluated once per render frame (every
+    keypress) into a function-local cache — never $script:-scoped, keeping
+    this engine's existing fully-stateless design. A throwing detector
+    degrades to a '❌ detection failed' row instead of crashing the menu.
+    Keep detector bodies cheap (Get-Command/Test-Path/cached config reads) —
+    no network calls, no subprocess spawns; they run on every keypress.
 .PARAMETER Inline
     If true, selecting an item runs its action WITHOUT clearing the screen,
     then returns to the menu (rolled/expanded feel). Default: false (full screen).
@@ -46,8 +53,9 @@ function Show-Menu {
             $normalized[$k] = @{ Action = $v; Desc = '' }
         } elseif ($v -is [hashtable]) {
             $normalized[$k] = @{
-                Action = if ($v.Action -is [scriptblock]) { $v.Action } else { {} }
-                Desc   = if ($v.Desc) { $v.Desc } else { '' }
+                Action   = if ($v.Action -is [scriptblock]) { $v.Action } else { {} }
+                Desc     = if ($v.Desc) { $v.Desc } else { '' }
+                Detector = if ($v.Detector -is [scriptblock]) { $v.Detector } else { $null }
             }
         }
     }
@@ -71,7 +79,18 @@ function Show-Menu {
     $maxLabelWidth = ($keys | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
     # Check descriptions too
     $maxDescWidth = ($normalized.Values | ForEach-Object { $_.Desc.Length } | Measure-Object -Maximum).Maximum
-    $boxWidth = [Math]::Max($Title.Length, $maxLabelWidth + $maxDescWidth) + 4
+    # Detector width: evaluated once here (not per-frame) purely to size the
+    # box consistently — the actual displayed values are still recomputed
+    # fresh every render frame in the loop below (see $detectorCache there).
+    $maxDetectorWidth = 0
+    foreach ($k in $keys) {
+        $d = $normalized[$k].Detector
+        if ($d) {
+            $r = try { & $d } catch { @{ Icon = '❌'; Text = 'detection failed' } }
+            if ($r -and $r.Text) { $maxDetectorWidth = [Math]::Max($maxDetectorWidth, $r.Text.Length + 4) }
+        }
+    }
+    $boxWidth = [Math]::Max($Title.Length, $maxLabelWidth + $maxDescWidth + $maxDetectorWidth) + 4
 
     # ── Hide cursor ────────────────────────────────────────────
     $prevCursor = [Console]::CursorVisible
@@ -94,11 +113,27 @@ function Show-Menu {
         Write-Host ('─' * $boxWidth) -ForegroundColor DarkGray -NoNewline
         Write-Host '┤' -ForegroundColor DarkGray
 
+        # ── Detector cache — fresh every render frame (every keypress), so
+        # displayed status never goes stale mid-session. Function-local, not
+        # $script:-scoped: dies with this call, matching the rest of this
+        # engine's stateless design. A throwing detector degrades to a
+        # visible "detection failed" row instead of crashing the menu.
+        $detectorCache = @{}
+        foreach ($k in $keys) {
+            $d = $normalized[$k].Detector
+            if ($d) {
+                $detectorCache[$k] = try { & $d } catch { @{ Icon = '❌'; Text = 'detection failed' } }
+            }
+        }
+
         # ── Items ──────────────────────────────────────────────
         for ($i = 0; $i -lt $keys.Count; $i++) {
             $key = $keys[$i]
             $item = $normalized[$key]
-            $pad = [Math]::Max(0, $boxWidth - $key.Length - ($item.Desc.Length + 2))
+            $det = $detectorCache[$key]
+            $detText = if ($det -and $det.Text) { "$($det.Icon) $($det.Text)" } else { '' }
+            $detLen = if ($detText) { $detText.Length + 2 } else { 0 }
+            $pad = [Math]::Max(0, $boxWidth - $key.Length - ($item.Desc.Length + 2) - $detLen)
 
             if ($i -eq $selected) {
                 Write-Host '  │ ' -ForegroundColor DarkGray -NoNewline
@@ -108,6 +143,10 @@ function Show-Menu {
                     Write-Host ' ' -BackgroundColor $highlightBg -NoNewline
                     Write-Host $item.Desc -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
                 }
+                if ($detText) {
+                    Write-Host '  ' -BackgroundColor $highlightBg -NoNewline
+                    Write-Host $detText -ForegroundColor $highlightFg -BackgroundColor $highlightBg -NoNewline
+                }
                 Write-Host (' ' * [Math]::Max(0, $pad - 1)) -BackgroundColor $highlightBg
                 Write-Host '│' -ForegroundColor DarkGray
             } else {
@@ -116,6 +155,10 @@ function Show-Menu {
                 if ($item.Desc) {
                     Write-Host '  ' -NoNewline
                     Write-Host $item.Desc -ForegroundColor DarkGray -NoNewline
+                }
+                if ($detText) {
+                    Write-Host '  ' -NoNewline
+                    Write-Host $detText -ForegroundColor DarkGray -NoNewline
                 }
                 Write-Host (' ' * [Math]::Max(0, $pad)) -NoNewline
                 Write-Host '│' -ForegroundColor DarkGray
