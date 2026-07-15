@@ -6,6 +6,11 @@
 #>
 
 function Show-DotfilesMenu {
+    # scripts/configure.ps1, deps.ps1, modernize.ps1, windows.ps1 live inside THIS repo —
+    # $env:DOTFILES_TOOLS is only ever set by the companion profile, so fall back to deriving
+    # our own root when it isn't loaded (e.g. the WT "Menu" profile launches menu-main.ps1
+    # directly, without dotfiles-powershell's profile).
+    $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
     $items = [ordered]@{
         '1. 📊 Check Status'     = @{ Action = { Invoke-IfAvailable -Command 'Show-Status' -Action { Show-Status } }; Desc = 'Full ecosystem health dashboard'; Detector = { Get-DotfilesCompanionStatus } }
         '2. 📥 Install/Reinstall'= @{ Action = {
@@ -75,22 +80,22 @@ function Show-DotfilesMenu {
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Delete old timestamped backups' }
         '7. ⚙️  Configure Wizard' = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\configure.ps1'
+            $s = Join-Path $toolsRoot 'scripts\configure.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "configure.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Interactive 5-step setup wizard' }
         '8. 📦 Dependencies'     = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\deps.ps1'
+            $s = Join-Path $toolsRoot 'scripts\deps.ps1'
             if (Test-Path $s) { Write-Info "Running deps.ps1..."; & $s } else { Write-Err "deps.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Winget auto-installer: Git, PS7, WT, VS Code, Starship, zoxide' }
         '9. 🧹 Modernize PS'     = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\modernize.ps1'
+            $s = Join-Path $toolsRoot 'scripts\modernize.ps1'
             if (Test-Path $s) { Write-Info "Running modernize.ps1..."; & $s } else { Write-Err "modernize.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'PSResourceGet, cleanup legacy, security baseline, PS 7.6+ ready'; Detector = { Get-ModuleStackStatus } }
         '10. 🪟 Windows Defaults' = @{ Action = {
-            $s = Join-Path $env:DOTFILES_TOOLS 'scripts\windows.ps1'
+            $s = Join-Path $toolsRoot 'scripts\windows.ps1'
             if (Test-Path $s) { & $s } else { Write-Err "windows.ps1 not found" }
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Explorer, taskbar, privacy, bloatware removal' }

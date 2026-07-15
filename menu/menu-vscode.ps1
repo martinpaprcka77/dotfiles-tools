@@ -10,7 +10,11 @@ function Show-VSCodeMenu {
         Write-Err "VS Code (code) is not in PATH."
         Read-Host "`nStiskni Enter..."; return
     }
-    $vsc = Join-Path $env:DOTFILES_TOOLS '.vscode'
+    # .vscode/ lives inside THIS repo — $env:DOTFILES_TOOLS is only ever set by the companion
+    # profile, so fall back to deriving our own root when it isn't loaded (e.g. the WT "Menu"
+    # profile launches menu-main.ps1 directly, without dotfiles-powershell's profile).
+    $toolsRoot = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }
+    $vsc = Join-Path $toolsRoot '.vscode'
     $items = [ordered]@{
         '1. 📊 Check Status'  = @{ Action = {
             Write-Host "`n  Committed configs:" -ForegroundColor Cyan
@@ -39,7 +43,7 @@ function Show-VSCodeMenu {
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Copilot agent context file' }
         '5. 💾 Backup Settings' = @{ Action = {
-            $backupDir = Join-Path $env:DOTFILES_TOOLS '.vscode\backups'
+            $backupDir = Join-Path $toolsRoot '.vscode\backups'
             New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
             $ts = Get-Date -Format 'yyyyMMdd-HHmmss'
             @('settings.json', 'tasks.json', 'agent-instructions.md') | ForEach-Object {
@@ -50,7 +54,7 @@ function Show-VSCodeMenu {
             Read-Host "`nStiskni Enter..."
         }; Desc = 'Save settings/tasks/agent with timestamp' }
         '6. ♻️  Restore Settings' = @{ Action = {
-            $backupDir = Join-Path $env:DOTFILES_TOOLS '.vscode\backups'
+            $backupDir = Join-Path $toolsRoot '.vscode\backups'
             $backups = Get-ChildItem $backupDir -Filter '*.bak' -ErrorAction SilentlyContinue | Sort LastWriteTime -Desc
             if (-not $backups) { Write-Warn "No backups."; Read-Host "`nStiskni Enter..."; return }
             Write-Host "`n  Backups:" -ForegroundColor Cyan
@@ -68,7 +72,7 @@ function Show-VSCodeMenu {
             Write-Host "`n  Recommended: ms-vscode.powershell, GitHub.copilot, GitHub.copilot-chat" -ForegroundColor Yellow
             Read-Host "`nStiskni Enter..."
         }; Desc = 'PowerShell-related extensions' }
-        '8. 🖥️  Open Folder'   = @{ Action = { code $env:DOTFILES_TOOLS }; Desc = 'Open ~/Projects/tools in VS Code' }
+        '8. 🖥️  Open Folder'   = @{ Action = { code $toolsRoot }; Desc = 'Open ~/Projects/tools in VS Code' }
         '9. ↩️  Back'          = @{ Action = { return }; Desc = 'Return to main menu' }
     }
     Show-Menu -Title 'VS CODE' -Items $items
