@@ -9,7 +9,10 @@ Companion: `dotfiles-powershell` at `~/.config/powershell/`.
 ## Key files
 - `bin/menu.ps1`, `bin/check.ps1` — entry points (in PATH)
 - `Toolkit/Toolkit.psm1` + `Toolkit.psd1` — module (36 functions)
-- `lib/menu.ps1` — `Show-Menu` engine (arrow-key nav, extensible, live status column via `Detector`)
+- `lib/menu.ps1` — `Show-Menu` engine (arrow-key nav, extensible, live status column via
+  `Detector`); box width is clamped to `[Console]::WindowWidth`, with `Desc`/`Detector` text
+  truncated to fit — a long detector message would otherwise push the box past the console width
+  and wrap mid-line, breaking the border (field-reported)
 - `lib/detectors.ps1` — Show-Menu status detectors + `Invoke-IfAvailable` guard
 - `lib/checkers.ps1` — `Invoke-SystemCheck` + 4 sub-checks (Windows-only, guarded)
 - `lib/config.ps1` — 3-layer config merge (defaults→JSON→env)
@@ -38,6 +41,12 @@ To add a function: write it in `lib/`, add to `Export-ModuleMember` in `.psm1`, 
   `windows.ps1`, `deps.ps1`, and `lib/checkers.ps1`/`lib/common.ps1`
 - Menu items calling companion-repo functions (Show-Status, Measure-Profile, …) go through
   `Invoke-IfAvailable` — this repo can be loaded standalone without the companion profile
+- `$env:DOTFILES_TOOLS` is only ever *set* by the companion profile — never assume it's populated
+  when locating files that live inside THIS repo (e.g. `scripts/*.ps1`, `.vscode/`). Fall back to
+  `Split-Path $PSScriptRoot -Parent` (see `lib/config.ps1`'s `$toolsRoot` pattern, also applied in
+  `menu/menu-terminal.ps1`/`menu-dotfiles.ps1`/`menu-vscode.ps1`) — field-reported crash was
+  `Join-Path $env:DOTFILES_TOOLS ...` with a `$null` env var when the menu launched without the
+  companion profile loaded (e.g. WT's "Menu" profile runs `menu-main.ps1` directly)
 - Before naming a short function/alias: check `Get-Command -CommandType Alias` first — a
   built-in alias silently wins over a same-named function (bit `gcm`/`gps` once, see AGENTS.md)
 

@@ -17,7 +17,7 @@
 | **Language** | PowerShell 5.1 / 7+ |
 | **Module** | `Toolkit` — 36 exported functions |
 | **Tests** | 63 Pester cases in `tests/Toolkit.Tests.ps1` |
-| **Dependencies** | dotfiles-powershell (provides `$env:DOTFILES_TOOLS`), Git, Docker (optional) |
+| **Dependencies** | Git, Docker (optional); dotfiles-powershell is optional too — it sets `$env:DOTFILES_TOOLS` as a convenience, but every self-referential lookup (`scripts/*.ps1`, `.vscode/`) falls back to deriving this repo's own root from `$PSScriptRoot` when it's unset |
 
 ---
 
@@ -37,7 +37,10 @@
 │
 ├── lib/                     ← source functions (dot-sourced by Toolkit.psm1)
 │   ├── common.ps1           ← Test-Admin, Write-Info/Success/Warn/Err, Confirm-Action
-│   ├── menu.ps1             ← Show-Menu — arrow-key menu engine with live status column
+│   ├── menu.ps1             ← Show-Menu — arrow-key menu engine with live status column;
+│   │                           box width clamped to [Console]::WindowWidth, Desc/Detector text
+│   │                           truncated to fit (a long detector message otherwise wraps the
+│   │                           line and breaks the border — field-reported)
 │   ├── checkers.ps1         ← Get-DiskStatus, Get-ServiceStatus, Get-NetworkInfo, Get-TopProcesses, Invoke-SystemCheck
 │   ├── config.ps1           ← Get-ToolkitConfig (defaults→JSON→env merge), Save-ToolkitConfig, Merge-Hashtable
 │   ├── modulepath.ps1       ← Get/Add/Remove/Reset/Export/Import/Test-PSModulePath (7 functions)
@@ -143,6 +146,14 @@ Invoke-Pester ~/Projects/tools/tests/Toolkit.Tests.ps1
   `gps`→`Get-Process` aliases and never actually ran — no error, just silently wrong behavior. Fix pattern:
   `Remove-Item Alias:<name> -Force -ErrorAction SilentlyContinue` before defining the function, or use
   `Set-Alias -Force` (which correctly overrides, unlike a same-named function).
+- **Never assume `$env:DOTFILES_TOOLS` is set** when locating a file inside this repo — it's set
+  by the companion profile as a convenience, but this repo must work standalone (menu items can be
+  launched directly, e.g. by a Windows Terminal custom profile, without the companion profile
+  loaded). Use the fallback pattern from `lib/config.ps1`: `$toolsRoot = if ($env:DOTFILES_TOOLS)
+  { $env:DOTFILES_TOOLS } else { Split-Path $PSScriptRoot -Parent }`. Field-reported crash:
+  `Join-Path $env:DOTFILES_TOOLS 'scripts\...'` with a `$null` env var throws
+  "Cannot bind argument to parameter 'Path' because it is null" — now fixed in
+  `menu-terminal.ps1`/`menu-dotfiles.ps1`/`menu-vscode.ps1`.
 
 ---
 
