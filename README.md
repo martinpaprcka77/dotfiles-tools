@@ -1,5 +1,12 @@
 # dotfiles-tools
 
+> ⚠️ **This repo has moved.** Development continues at
+> **[martinpaprcka77/martinpaprcka77.github.io](https://github.com/martinpaprcka77/martinpaprcka77.github.io)**
+> (`toolkit/` subfolder) — merged with `dotfiles-powershell` into one repo to eliminate cross-repo
+> coupling. This repo is kept for history; it will not receive further updates.
+>
+> One-command install (new repo): `irm https://raw.githubusercontent.com/martinpaprcka77/martinpaprcka77.github.io/main/remote-install.ps1 | iex`
+
 > **PowerShell toolbox** — interactive menus with live status detection, system diagnostics, Docker & Git helpers, Toolkit module with 36 functions.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--tools-blue)](#)
